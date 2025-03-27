@@ -1,0 +1,290 @@
+import time
+from threading import Event, Lock, Thread
+from typing import Protocol, Sequence
+
+import numpy as np
+from dynamixel_sdk.group_sync_read import GroupSyncRead
+from dynamixel_sdk.group_sync_write import GroupSyncWrite
+from dynamixel_sdk.packet_handler import PacketHandler
+from dynamixel_sdk.port_handler import PortHandler
+from dynamixel_sdk.robotis_def import (
+    COMM_SUCCESS,
+    DXL_HIBYTE,
+    DXL_HIWORD,
+    DXL_LOBYTE,
+    DXL_LOWORD,
+)
+
+ADDR_TORQUE_ENABLE = 64
+ADDR_GOAL_CURRENT = 102
+LEN_GOAL_CURRENT = 2
+ADDR_PRESENT_POSITION = 132
+LEN_PRESENT_POSITION = 4
+ADDR_PRESENT_VELOCITY = 128
+LEN_PRESENT_VELOCITY = 4
+ADDR_PRESENT_CURRENT = 126
+LEN_PRESENT_CURRENT = 2
+ADDR_GOAL_POSITION = 116
+LEN_GOAL_POSITION = 4
+TORQUE_ENABLE = 1
+TORQUE_DISABLE = 0
+ADDR_OPERATING_MODE = 11
+CURRENT_CONTROL_MODE = 0
+POSITION_CONTROL_MODE = 3
+
+
+class DynamixelDriverProtocol(Protocol):
+    def set_current(self, currents: Sequence[float]):
+        """Set the current for the Dynamixel servos.
+
+        Args:
+            currents (Sequence[float]): A list of currents in mA.
+        """
+        ...
+
+    def torque_enabled(self) -> bool:
+        """Check if torque is enabled for the Dynamixel servos.
+
+        Returns:
+            bool: True if torque is enabled, False if it is disabled.
+        """
+        ...
+
+    def set_torque_mode(self, enable: bool):
+        """Set the torque mode for the Dynamixel servos.
+
+        Args:
+            enable (bool): True to enable torque, False to disable.
+        """
+        ...
+
+    def get_positions_and_velocities(self) -> np.ndarray:
+        """Get the current joint angles in radians.
+
+        Returns:
+            np.ndarray: An array of joint angles.
+        """
+        ...
+
+    def close(self):
+        """Close the driver."""
+
+
+class DynamixelDriver(DynamixelDriverProtocol):
+    def __init__(self, ids: Sequence[int], port: str = "/dev/ttyUSB0", baudrate: int = 4000000):
+        self._ids = ids
+        self._positions = None
+        self._velocities = None
+        self._currents = None
+
+        self._lock = Lock()
+
+        self._portHandler = PortHandler(port)
+        self._packetHandler = PacketHandler(2.0)
+        self._groupSyncRead = GroupSyncRead(
+            self._portHandler, self._packetHandler, ADDR_PRESENT_CURRENT, 
+            LEN_PRESENT_CURRENT + LEN_PRESENT_POSITION + LEN_PRESENT_VELOCITY,
+        )
+        self._groupSyncWrite = GroupSyncWrite(
+            self._portHandler, self._packetHandler, ADDR_GOAL_CURRENT, LEN_GOAL_CURRENT,
+        )
+        self._groupSyncWritePos = GroupSyncWrite(
+            self._portHandler, self._packetHandler, ADDR_GOAL_POSITION, LEN_GOAL_POSITION,
+        )
+
+        if not self._portHandler.openPort():
+            raise RuntimeError("Failed to open the port")
+        if not self._portHandler.setBaudRate(baudrate):
+            raise RuntimeError(f"Failed to change the baudrate, {baudrate}")
+
+        for dxl_id in self._ids:
+            if not self._groupSyncRead.addParam(dxl_id):
+                raise RuntimeError(f"Failed to add parameter for Dynamixel with ID {dxl_id}")
+
+        self._torque_enabled = False
+        try:
+            self.set_torque_mode(self._torque_enabled)
+        except Exception as e:
+            print(f"port: {port}, {e}")
+
+    @property
+    def torque_enabled(self) -> bool:
+        return self._torque_enabled
+
+    def set_torque_mode(self, enable: bool):
+        torque_value = TORQUE_ENABLE if enable else TORQUE_DISABLE
+        with self._lock:
+            for dxl_id in self._ids:
+                dxl_comm_result, dxl_error = self._packetHandler.write1ByteTxRx(
+                    self._portHandler, dxl_id, ADDR_TORQUE_ENABLE, torque_value
+                )
+                if dxl_comm_result != COMM_SUCCESS or dxl_error != 0:
+                    raise RuntimeError(f"Failed to set torque mode for Dynamixel with ID {dxl_id}")
+        self._torque_enabled = enable
+
+    def close(self):
+        self._portHandler.closePort()
+
+    def set_operating_mode(self, mode: int):
+        for dxl_id in self._ids:
+            dxl_comm_result, dxl_error = self._packetHandler.write1ByteTxRx(
+                self._portHandler, dxl_id, ADDR_OPERATING_MODE, mode
+            )
+            if dxl_comm_result != COMM_SUCCESS or dxl_error != 0:
+                raise RuntimeError(f"Failed to set operating mode for Dynamixel with ID {dxl_id}")
+    
+    def verify_operating_mode(self, expected_mode: int):
+        for dxl_id in self._ids:
+            mode, dxl_comm_result, dxl_error = self._packetHandler.read1ByteTxRx(
+                self._portHandler, dxl_id, ADDR_OPERATING_MODE
+            )
+            if dxl_comm_result != COMM_SUCCESS or dxl_error != 0 or mode != expected_mode:
+                raise RuntimeError(f"Operating mode mismatch for Dynamixel ID {dxl_id}")
+
+    def get_positions_velocities_and_currents(self):
+        _currents = np.zeros(len(self._ids), dtype=int)
+        _positions = np.zeros(len(self._ids), dtype=int)
+        _velocities = np.zeros(len(self._ids), dtype=int)
+        
+        # Perform the group sync read transaction
+        dxl_comm_result = self._groupSyncRead.txRxPacket()
+        if dxl_comm_result != COMM_SUCCESS:
+            raise RuntimeError(f"Warning, communication failed: {dxl_comm_result}")
+        
+        for i, dxl_id in enumerate(self._ids):
+            # Read current data
+            if self._groupSyncRead.isAvailable(dxl_id, ADDR_PRESENT_CURRENT, LEN_PRESENT_CURRENT):
+                current = self._groupSyncRead.getData(dxl_id, ADDR_PRESENT_CURRENT, LEN_PRESENT_CURRENT)
+                # Apply sign correction
+                if current > 0x7FFF:
+                    current -= 0x10000
+                _currents[i] = current
+            else:
+                raise RuntimeError(f"Failed to get velocity for Dynamixel with ID {dxl_id}")
+            
+            # Read velocity data
+            if self._groupSyncRead.isAvailable(dxl_id, ADDR_PRESENT_VELOCITY, LEN_PRESENT_VELOCITY):
+                velocity = self._groupSyncRead.getData(dxl_id, ADDR_PRESENT_VELOCITY, LEN_PRESENT_VELOCITY)
+                # Apply sign correction
+                if velocity > 0x7FFFFFFF:
+                    velocity -= 0x100000000
+                _velocities[i] = velocity
+            else:
+                raise RuntimeError(f"Failed to get velocity for Dynamixel with ID {dxl_id}")
+            
+            # Read position data
+            if self._groupSyncRead.isAvailable(dxl_id, ADDR_PRESENT_POSITION, LEN_PRESENT_POSITION):
+                position = self._groupSyncRead.getData(dxl_id, ADDR_PRESENT_POSITION, LEN_PRESENT_POSITION)
+                # Apply sign correction
+                if position > 0x7FFFFFFF:
+                    position -= 0x100000000
+                _positions[i] = position
+            else:
+                raise RuntimeError(f"Failed to get position for Dynamixel with ID {dxl_id}")
+            
+        self._positions = _positions
+        self._velocities = _velocities
+        self._currents = _currents
+        
+        # Return positions and velocities in meaningful units
+        positions_in_radians = _positions / 2048.0 * np.pi
+        velocities_in_units = _velocities  # Adjust if scaling to meaningful units is required
+        currents_in_units = _currents * 2.69
+        
+        return positions_in_radians, velocities_in_units, currents_in_units
+    
+
+    def set_current(self, currents: Sequence[float]):
+        if len(currents) != len(self._ids):
+            raise ValueError("The length of currents must match the number of servos")
+        if not self._torque_enabled:
+            raise RuntimeError("Torque must be enabled to set currents")
+
+        currents = np.clip(currents, -910, 910)
+        # currents = np.clip(currents, -450, 450)
+        # currents = np.clip(currents, -650, 650)
+
+        for dxl_id, current in zip(self._ids, currents):
+            current_value = int(current)
+
+            param_goal_current = [
+                DXL_LOBYTE(current_value),
+                DXL_HIBYTE(current_value)
+            ]
+
+            if not self._groupSyncWrite.addParam(dxl_id, param_goal_current):
+                raise RuntimeError(f"Failed to set current for Dynamixel with ID {dxl_id}")
+        dxl_comm_result = self._groupSyncWrite.txPacket()
+        if dxl_comm_result != COMM_SUCCESS:
+            raise RuntimeError("Failed to syncwrite goal current")
+        self._groupSyncWrite.clearParam()
+
+    def set_torque(self, torques: Sequence[float]):
+        currents = 1000/2.69*torques
+        self.set_current(currents)
+     
+
+    def set_joints(self, joint_angles: Sequence[float]):
+        if len(joint_angles) != len(self._ids):
+            raise ValueError(
+                "The length of joint_angles must match the number of servos"
+            )
+        if not self._torque_enabled:
+            raise RuntimeError("Torque must be enabled to set joint angles")
+
+        for dxl_id, angle in zip(self._ids, joint_angles):
+            # Convert the angle to the appropriate value for the servo
+            position_value = int(angle * 2048 / np.pi)
+
+            # Allocate goal position value into byte array
+            param_goal_position = [
+                DXL_LOBYTE(DXL_LOWORD(position_value)),
+                DXL_HIBYTE(DXL_LOWORD(position_value)),
+                DXL_LOBYTE(DXL_HIWORD(position_value)),
+                DXL_HIBYTE(DXL_HIWORD(position_value)),
+            ]
+
+            # Add goal position value to the Syncwrite parameter storage
+            dxl_addparam_result = self._groupSyncWritePos.addParam(
+                dxl_id, param_goal_position
+            )
+            if not dxl_addparam_result:
+                raise RuntimeError(
+                    f"Failed to set joint angle for Dynamixel with ID {dxl_id}"
+                )
+        # Syncwrite goal position
+        dxl_comm_result = self._groupSyncWritePos.txPacket()
+        if dxl_comm_result != COMM_SUCCESS:
+            raise RuntimeError("Failed to syncwrite goal position")
+        # Clear syncwrite parameter storage
+        self._groupSyncWritePos.clearParam()
+    
+
+
+    
+def main():
+    ids = [1, 2, 3, 4, 5, 6, 7]
+    port = "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FT8ISV6J-if00-port0"
+
+    try:
+        driver = DynamixelDriver(ids, port=port, baudrate=4000000)
+    except FileNotFoundError:
+        print(f"Port {port} not found. Please check the connection.")
+        return
+    
+    driver.set_operating_mode(0)
+    driver.set_torque_mode(True)
+
+    try:
+        while True:
+            positions = driver.get_positions()
+            print(f"Current joint positions for IDs {ids}: {positions}")
+
+            current_values = [0, 0, 0, 0, 0, 0, 0.0]
+            driver.set_current(current_values)
+    except KeyboardInterrupt:
+        driver.set_torque_mode(False)
+        driver.close()
+
+if __name__ == "__main__":
+    main()
