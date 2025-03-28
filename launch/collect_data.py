@@ -48,8 +48,6 @@ def generate_launch_description():
         output='screen',
         emulate_tty=True,
         parameters=[
-            {"torque_feedback": torque_feedback},
-            {"gravity_comp": torque_feedback},
             {"is_left": False},
             {"config_file": "franka_right.yaml"}
         ]

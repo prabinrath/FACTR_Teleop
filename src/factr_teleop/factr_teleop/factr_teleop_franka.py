@@ -20,8 +20,8 @@ from python_utils.global_configs import franka_right_real_zmq_addresses, franka_
 class FACTRTeleopFranka(Node, ABC):
     def __init__(self):
         super().__init__('factr_teleop_franka')
-        self.torque_feedback = self.declare_parameter('torque_feedback', False).get_parameter_value().bool_value
-        self.gravity_comp = self.declare_parameter('gravity_comp', False).get_parameter_value().bool_value
+        # self.torque_feedback = self.declare_parameter('torque_feedback', False).get_parameter_value().bool_value
+        # self.gravity_comp = self.declare_parameter('gravity_comp', False).get_parameter_value().bool_value
         self.is_left = self.declare_parameter('is_left', False).get_parameter_value().bool_value
 
         config_file_name = self.declare_parameter('config_file', '').get_parameter_value().string_value
@@ -74,8 +74,6 @@ class FACTRTeleopFranka(Node, ABC):
         self.joint_pos = np.zeros(self.num_arm_joints)
         self.joint_vel = np.zeros(self.num_arm_joints)
         self.external_torque = np.zeros(self.num_arm_joints)
-        self.external_torque_sensed = np.zeros(self.num_arm_joints)
-        self.torque_arm = np.zeros(self.num_arm_joints)
 
         self.gripper_pos_prev = 0.0
         self.gripper_pos = 0.0
@@ -100,10 +98,19 @@ class FACTRTeleopFranka(Node, ABC):
         self.joint_limit_kp = self.config["controller"]["joint_limit_barrier"]["kp"]
         self.joint_limit_kd = self.config["controller"]["joint_limit_barrier"]["kd"]
 
-        # null_space_regulation
-        self.null_space_joint_target = self.config["controller"]["null_space_regulation"]["null_space_joint_target"]
+        # null space regulation
+        self.null_space_joint_target = np.array(self.config["controller"]["null_space_regulation"]["null_space_joint_target"])
         self.null_space_kp = self.config["controller"]["null_space_regulation"]["kp"]
         self.null_space_kd = self.config["controller"]["null_space_regulation"]["kd"]
+
+        # torque feedback
+        self.enable_torque_feedback = self.config["controller"]["torque_feedback"]["enable"]
+        self.torque_feedback_gain = self.config["controller"]["torque_feedback"]["gain"]
+        self.torque_feedback_motor_scalar = self.config["controller"]["torque_feedback"]["motor_scalar"]
+
+        # gripper feedback
+        self.enable_gripper_feedback = self.config["controller"]["gripper_feedback"]["enable"]
+        self.gripper_feedback_gain = self.config["controller"]["gripper_feedback"]["gain"]
 
 
         servo_types = [
@@ -329,6 +336,24 @@ class FACTRTeleopFranka(Node, ABC):
         return tau_n
     
 
+    def torque_feedback(self):
+        self.external_torque = self.franka_torque_sub.message
+        self.obs_franka_torque_pub.publish(self.create_array_msg(self.external_torque))
+
+        self.external_torque = np.where(
+            np.abs(self.external_torque)>0.0, 
+            self.torque_feedback_gain*self.external_torque, 
+            0.0
+        ) 
+        self.external_torque = self.external_torque/self.torque_feedback_motor_scalar
+        return -1.0* self.external_torque
+
+
+    def gripper_feedback(self):
+        torque_gripper = -1.0*self.gripper_external_torque / self.gripper_feedback_gain
+        return torque_gripper
+
+    
     def compute_combined_torque(self):
         torque_arm = np.zeros(self.num_arm_joints)
         torque_l, torque_gripper = self.joint_limit_barrier()
@@ -338,6 +363,12 @@ class FACTRTeleopFranka(Node, ABC):
         if self.enable_gravity_comp:
             torque_arm += self.gravity_compensation()
             torque_arm += self.friction_compensation()
+        
+        if self.enable_torque_feedback:
+            torque_arm += self.torque_feedback()
+        
+        if self.enable_gripper_feedback:
+            torque_gripper += self.gripper_feedback()
 
         return torque_arm, torque_gripper
     
@@ -360,47 +391,34 @@ class FACTRTeleopFranka(Node, ABC):
 
         # obs franka torque, set gello torque
         torque_arm, torque_gripper = self.compute_combined_torque()
-        if self.torque_feedback:
-            self.external_torque = self.franka_torque_sub.message
-            self.obs_franka_torque_pub.publish(self.create_array_msg(self.external_torque))
-            self.external_torque = np.where(np.abs(self.external_torque)>0.0, 3.5*self.external_torque, 0.0) 
-            self.external_torque = self.external_torque/94.5652173913
-
-            torque_arm += -1.0* self.external_torque
-
-            if abs(self.gripper_external_torque) > 0.0:
-                torque_gripper += -1.0*self.gripper_external_torque / 3.53 
-
-        torque_arm_beta = 0.0
-        self.torque_arm = torque_arm_beta * self.torque_arm + (1-torque_arm_beta) * torque_arm
-        self.set_joint_torque(self.torque_arm, torque_gripper)
+        self.set_joint_torque(torque_arm, torque_gripper)
         
         # send franka position
         self.franka_GELLO_pub.send_message(positions)
         self.cmd_franka_pos_pub.publish(self.create_array_msg(positions))
     
 
-    @abstractmethod
-    def get_leader_arm_joint_state(self):
-        pass
+    # @abstractmethod
+    # def get_leader_arm_joint_state(self):
+    #     pass
     
 
-    @abstractmethod
-    def get_leader_arm_external_joint_torque(self):
-        pass
+    # @abstractmethod
+    # def get_leader_arm_external_joint_torque(self):
+    #     pass
 
-    @abstractmethod
-    def send_leader_arm_joint_position_target(self, joint_position_target):
-        pass
+    # @abstractmethod
+    # def send_leader_arm_joint_position_target(self, joint_position_target):
+    #     pass
     
-    
-    @abstractmethod
-    def get_leader_gripper_state(self):
-        pass
 
-    @abstractmethod
-    def send_leader_gripper_command(self, gripper_command):
-        pass
+    # @abstractmethod
+    # def get_leader_gripper_state(self):
+    #     pass
+
+    # @abstractmethod
+    # def send_leader_gripper_command(self, gripper_command):
+    #     pass
 
     
 
