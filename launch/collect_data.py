@@ -48,11 +48,10 @@ def generate_launch_description():
         output='screen',
         emulate_tty=True,
         parameters=[
-            {"connect_to_real": real_robot},
             {"torque_feedback": torque_feedback},
             {"gravity_comp": torque_feedback},
-            {"teleop_device_attached": False},
             {"is_left": False},
+            {"config_file": "franka_right.yaml"}
         ]
     )
 
@@ -83,7 +82,7 @@ def generate_launch_description():
     
     return LaunchDescription([
         factr_teleop_franka_right,
-        gripper_right_node,
-        data_record_node,
-        zed_node
+        # gripper_right_node,
+        # data_record_node,
+        # zed_node
     ])

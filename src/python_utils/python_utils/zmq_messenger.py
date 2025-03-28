@@ -8,7 +8,7 @@ class ZMQSubscriber:
     Creates a thread that subscribes to a ZMQ publisher
     """
 
-    def __init__(self, ip_address="tcp://192.168.1.3:2096"):
+    def __init__(self, ip_address="tcp://192.168.1.3:2096", verbose=False):
         context = zmq.Context()
         self._sub_socket = context.socket(zmq.SUB)
         self._sub_socket.setsockopt(zmq.CONFLATE, False)
@@ -19,11 +19,12 @@ class ZMQSubscriber:
         self._subscriber_thread.start()
 
         self._value = None
+        self.verbose = verbose
         self.last_message = None
 
     @property
     def message(self):
-        if self._value is None:
+        if self._value is None and self.verbose:
             print("The subscriber has not received a message")
         self.last_message = self._value
         return self._value
