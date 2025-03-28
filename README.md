@@ -15,14 +15,13 @@ _Carnegie Mellon University_
 
 ## Catalog
 - [Environment](#environment)
-- [Dataset](#dataset)
-- [Training and Testing](#training-and-testing)
-- [Acknowledgements](#acknowledgements)
+- [Data Collection](#data-collection)
+- [Policy Rollout](#policy-rollout)
 - [Citation](#citation)
   
 ## Environment
 
-## Data Collection and Processing
+## Data Collection
 We provide instructions and sample data collection scripts in ROS2. You might need your custom nodes for robots and sensors to run the system. In our case, the collected data is saved in following format:
 ### Data Structure
 Each trajectory is saved as a separate pickle file. Each pickle file contains a dictionary with the following structure:
@@ -47,7 +46,7 @@ trajectory.pkl
   - Keys are the same data source names as in the "data" dictionary
   - Values are lists containing the timestamps when each corresponding data point was recorded
 
-*Note*: Different data sources may log at different frequencies, resulting in varying list lengths across topics. The timestamps are crucial for properly aligning and post-processing the data.
+*Note*: Different data sources may log at different frequencies, resulting in varying list lengths across data sources. The timestamps are crucial for properly aligning and post-processing the data.
 While ROS provides synchronization APIs, we chose to record raw timestamps and perform post-processing to allow for greater flexibility in data analysis and alignment.
 ```python
 # Example of a trajectory structure
@@ -64,6 +63,9 @@ While ROS provides synchronization APIs, we chose to record raw timestamps and p
     }
 }
 ```
+
+### Data Processing and Training
+Please check for detailed instructions in our [factr](insert_link) repo.
 
 ## Policy Rollout
 We provide a sample rollout script in ROS2. Again, custom nodes for robots and sensors need to be implemented. In our case, the rollout launch file could be called as follows: 
