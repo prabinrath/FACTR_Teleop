@@ -48,7 +48,6 @@ def generate_launch_description():
         output='screen',
         emulate_tty=True,
         parameters=[
-            {"is_left": False},
             {"config_file": "franka_right.yaml"}
         ]
     )
