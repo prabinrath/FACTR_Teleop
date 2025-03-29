@@ -30,6 +30,10 @@ from python_utils.global_configs import franka_right_real_zmq_addresses, franka_
 
 
 class FrankaBridge(Node):  
+    """
+    This class is used to bridge the Franka arm to the ROS system.
+    It subscribes to the Franka arm's joint state and torque topics and publishes the joint state and torque to the ROS system.
+    """
     def __init__(self):
         super().__init__('franka_bridge')
         self.connect_to_real = self.declare_parameter('connect_to_real', True).get_parameter_value().bool_value
@@ -46,7 +50,7 @@ class FrankaBridge(Node):
         self.left_franka_cmd_sub = self.create_subscription(JointState, f'/gello/left/cmd_franka_pos', self.left_franka_cmd_callback, 10)
         
         self.left_franka_pos_sub = ZMQSubscriber(left_zmq_addresses["joint_state_sub"])
-        self.left_franka_pos_pub = self.create_publisher(JointState, f'/franka/left/obs_franka_pos', 10)
+        self.left_franka_pos_pub = self.create_publisher(JointState, f'/franka/left/obs_franka_state', 10)
         
         self.left_franka_torque_sub = ZMQSubscriber(left_zmq_addresses["joint_torque_sub"])
         self.left_franka_torque_pub = self.create_publisher(JointState, f'/franka/left/obs_franka_torque', 10)
@@ -55,7 +59,7 @@ class FrankaBridge(Node):
         self.right_franka_cmd_sub = self.create_subscription(JointState, f'/gello/right/cmd_franka_pos', self.right_franka_cmd_callback, 10)
         
         self.right_franka_pos_sub = ZMQSubscriber(right_zmq_addresses["joint_state_sub"])
-        self.right_franka_pos_pub = self.create_publisher(JointState, f'/franka/right/obs_franka_pos', 10)
+        self.right_franka_pos_pub = self.create_publisher(JointState, f'/franka/right/obs_franka_state', 10)
         
         self.right_franka_torque_sub = ZMQSubscriber(right_zmq_addresses["joint_torque_sub"])
         self.right_franka_torque_pub = self.create_publisher(JointState, f'/franka/right/obs_franka_torque', 10)

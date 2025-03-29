@@ -82,11 +82,7 @@ def generate_launch_description():
     
     return LaunchDescription([
         gripper_node,
-        policy_rollout_node,
-        zed_node,
         franka_bridge_node,
-        zed_node
+        zed_node,
+        policy_rollout_node,
     ])
-
-
-

@@ -60,7 +60,7 @@ class FACTRTeleopFrankaZMQ(FACTRTeleopFranka):
             zmq_addresses = franka_right_real_zmq_addresses
         else:
             raise ValueError(f"Invalid robot name '{self.name}'. Expected 'left' or 'right'.")
-  
+
         # ZMQ publisher used to send joint position commands to the Franka follower arm
         self.franka_cmd_pub = ZMQPublisher(zmq_addresses["joint_pos_cmd_pub"])
         # ZMQ subscriber used to get the current joint position and velocity of the Franka follower arm

@@ -17,7 +17,7 @@ _Carnegie Mellon University_
 - [Installation](#installation)
 - [FACTR Teleop](#factr-teleop)
 - [Data Collection](#data-collection)
-- [Policy Rollout](#policy-rollout)
+- [Training and Deployment](#training-and-deployment)
 - [License and Acknowledgements](#license-and-acknowledgements)
 - [Citation](#citation)
 
@@ -122,11 +122,16 @@ While ROS provides synchronization APIs, we chose to record raw timestamps and p
 }
 ```
 
+
+
+## Training and Deployment
+
 ### Data Processing and Training
 Please check for detailed instructions in our [factr](https://github.com/RaindragonD/factr) repo.
 
-## Policy Rollout
-We provide a sample rollout script in ROS2. Again, custom nodes for robots and sensors need to be implemented. In our case, the rollout launch file could be called as follows: 
+### Policy Rollout
+
+We provide a sample rollout script in ROS2. In our case, the rollout launch file could be called as follows: 
 ```bash
 ros2 launch factr_teleop/launch/rollout.py
 ```

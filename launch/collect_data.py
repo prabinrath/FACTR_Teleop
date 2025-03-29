@@ -31,7 +31,6 @@ def generate_launch_description():
                 "state_topics": [
                     "/gello/right/cmd_franka_pos",
                     "/gripper/right/cmd_gripper_pos",
-                    "/franka/right/obs_franka_pos",
                     "/franka/right/obs_franka_torque",
                     "/gripper/right/obs_gripper_pos",
                 ]

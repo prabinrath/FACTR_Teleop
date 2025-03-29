@@ -27,14 +27,24 @@ from cv_bridge import CvBridge
 
 
 def ros2_time_to_ns(ros2_time):
+    """
+    Convert a ROS2 time to nanoseconds.
+    """
     return int(ros2_time.sec * 1e9 + ros2_time.nanosec)
 
 def create_joint_state_msg(data):
+    """
+    Create a JointState message from a numpy array.
+    """
     msg = JointState()
     msg.position = list(map(float, data))
     return msg
 
 def process_msg(msg):
+    """
+    Process a ROS2 message and return a numpy array.
+    Low-dimensional data is returned as a 1D numpy array, while image data is returned as a JPEG encoded byte string.
+    """
     cv_bridge = CvBridge()
     if isinstance(msg, JointState):
         data = np.array(msg.position)
