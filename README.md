@@ -123,7 +123,7 @@ While ROS provides synchronization APIs, we chose to record raw timestamps and p
 ```
 
 ### Data Processing and Training
-Please check for detailed instructions in our [factr](insert_link) repo.
+Please check for detailed instructions in our [factr](https://github.com/RaindragonD/factr) repo.
 
 ## Policy Rollout
 We provide a sample rollout script in ROS2. Again, custom nodes for robots and sensors need to be implemented. In our case, the rollout launch file could be called as follows: 
