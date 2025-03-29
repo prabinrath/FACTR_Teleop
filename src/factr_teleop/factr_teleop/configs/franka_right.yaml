@@ -1,16 +1,20 @@
 name: right
 
 dynamixel:
+  # USB port name given by the command: ls /dev/serial/by-id/
+  dynamixel_port: "usb-FTDI_USB__-__Serial_Converter_FT951EJA-if00-port0"
+  # Servo joint directions to match that of the leader arm
   joint_signs: [1, 1, 1, -1, 1, -1, 1, -1]
-  joint_ids: [1, 2, 3, 4, 5, 6, 7, 8]
-  # ls /dev/serial/by-id/
-  dynamixel_port: "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FT951EJA-if00-port0"
+
   
 initialization:
+  # The expected leader arm joint position before launching the script
   calibration_joint_pos: [-0.1197, 1.8454, -0.0613, -1.2885, -0.1657, 2.5004, -0.0506]
+  # The leader arm must be brought to this joint position before the follower starts mirroring the leader
   initial_match_joint_pos: [0.0, -0.7854, 0.0, -2.356, 0.0, 1.57, 0.0, 0.0]
 
 gripper_teleop:
+  # The maximum range (in rad) of the leader gripper trigger
   actuation_range: 0.8
 
 controller:

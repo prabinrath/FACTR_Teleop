@@ -129,7 +129,7 @@ class FACTRTeleopFranka(Node, ABC):
         Instantiates driver for interfacing with Dynamixel servos.
         """
         self.joint_signs = np.array(self.config["dynamixel"]["joint_signs"], dtype=float)
-        self.dynamixel_port = self.config["dynamixel"]["dynamixel_port"]
+        self.dynamixel_port = "/dev/serial/by-id/" + self.config["dynamixel"]["dynamixel_port"]
 
         # checks of the latency timer on ttyUSB of the corresponding port is 1
         # if it is not 1, the control loop cannot run at 200 Hz, which will cause
@@ -150,9 +150,10 @@ class FACTRTeleopFranka(Node, ABC):
             "XC330_T288_T", "XM430_W210_T", "XC330_T288_T", "XM430_W210_T", 
             "XC330_T288_T", "XC330_T288_T", "XC330_T288_T", "XC330_T288_T",
         ]
+        joint_ids = [1, 2, 3, 4, 5, 6, 7, 8]
         try:
             self.driver = DynamixelDriver(
-                self.config["dynamixel"]["joint_ids"], servo_types, self.dynamixel_port
+                joint_ids, servo_types, self.dynamixel_port
             )
         except FileNotFoundError:
             self.get_logger().info(f"Port {self.dynamixel_port} not found. Please check the connection.")
