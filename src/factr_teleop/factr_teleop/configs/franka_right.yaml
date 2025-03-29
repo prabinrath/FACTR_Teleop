@@ -39,5 +39,6 @@ controller:
   gripper_feedback:
     enable: True
     gain: 0.28328611898
+    ema_beta: 0.95
 
 

@@ -1,20 +1,12 @@
 import numpy as np
 import time
-import pinocchio as pin
-import os
-import subprocess
-import yaml
-from abc import ABC, abstractmethod
 
 import rclpy
-from rclpy.node import Node
 from sensor_msgs.msg import JointState
 
 from factr_teleop.factr_teleop_franka import FACTRTeleopFranka
 from python_utils.zmq_messenger import ZMQPublisher, ZMQSubscriber
-from python_utils.utils import get_workspace_root
-from python_utils.global_configs import franka_left_real_zmq_addresses
-from python_utils.global_configs import franka_right_real_zmq_addresses
+from python_utils.global_configs import franka_left_real_zmq_addresses, franka_right_real_zmq_addresses
 
 
 def create_array_msg(data):
@@ -24,9 +16,22 @@ def create_array_msg(data):
 
 
 class FACTRTeleopFrankaZMQ(FACTRTeleopFranka):
+    """
+    This class implements the required communication methods required by FACTRTeleopFranka using
+    ZMQ. Communication between the leader teleop arm and the follower Franka arm is established
+    using ZMQ subscribers and publishers. In addition, this class re-publishes all ZMQ communication
+    to ROS via ROS publishers, such as the current Franka joint states, the current Franka joint
+    position target commands, etc. 
+
+    This class also demonstrates an example implementation of force-feedback for the leader gripper.
+    The follower gripper publishes its torque information via ROS publisher. This class subscribes
+    to the torque and computes joint torque for the leader gripper to achieve force-feedback.
+    """
+
     def __init__(self):
         super().__init__()
         self.gripper_feedback_gain = self.config["controller"]["gripper_feedback"]["gain"]
+        self.gripper_torque_ema_beta = self.config["controller"]["gripper_feedback"]["ema_beta"]
         self.gripper_external_torque = 0.0
 
     def set_up_communication(self):
@@ -42,7 +47,7 @@ class FACTRTeleopFrankaZMQ(FACTRTeleopFranka):
         # ZMQ subscriber used to get the current joint position and velocity of the Franka follower arm
         self.franka_joint_state_sub = ZMQSubscriber(zmq_addresses["joint_state_sub"])
         # ROS publisher for re-publishing the current joint states of the Franka follower arm
-        self.obs_franka_pos_pub = self.create_publisher(JointState, f'/franka/{self.name}/obs_franka_pos', 10)
+        self.obs_franka_state_pub = self.create_publisher(JointState, f'/franka/{self.name}/obs_franka_state', 10)
         # ROS publisher for re-publishing Franka and gripper commands
         self.cmd_franka_pos_pub = self.create_publisher(JointState, f'/factr_teleop/{self.name}/cmd_franka_pos', 10)
         self.cmd_gripper_pos_pub = self.create_publisher(JointState, f'/factr_teleop/{self.name}/cmd_gripper_pos', 10)
@@ -65,9 +70,9 @@ class FACTRTeleopFrankaZMQ(FACTRTeleopFranka):
             )
 
     def _gripper_external_torque_callback(self, data):
-        beta = 0.95
         gripper_external_torque = data.position[0]
-        self.gripper_external_torque = beta * self.gripper_external_torque + (1-beta) * gripper_external_torque
+        self.gripper_external_torque = self.gripper_torque_ema_beta * self.gripper_external_torque + \
+            (1-self.gripper_torque_ema_beta) * gripper_external_torque
         
     def get_leader_gripper_feedback(self):
         return self.gripper_external_torque
@@ -78,9 +83,9 @@ class FACTRTeleopFrankaZMQ(FACTRTeleopFranka):
     
     def get_leader_arm_external_joint_torque(self):
         external_torque = self.franka_torque_sub.message
+        # re-publishe Franka external joint torque to ROS
         self.obs_franka_torque_pub.publish(create_array_msg(external_torque))
         return external_torque
-
 
     def update_communication(self, leader_arm_pos, leader_gripper_pos):
         # send leader arm position as joint position target to the follower Franka arm
@@ -91,11 +96,12 @@ class FACTRTeleopFrankaZMQ(FACTRTeleopFranka):
         # send gripper command to follower gripper
         self.cmd_gripper_pos_pub.publish(create_array_msg([leader_gripper_pos]))
 
-        # update the current joint state of Franka follower arm
+        # publish the current Franka follower arm joint state to ROS for behavior cloning
+        # data collection purposes.
         franka_state = self.franka_joint_state_sub.message
-        self.obs_franka_pos_pub.publish(create_array_msg(franka_state))
+        self.obs_franka_state_pub.publish(create_array_msg(franka_state))
         
-        
+
 def main(args=None):
     rclpy.init(args=args)
     factr_teleop_franka_zmq = FACTRTeleopFrankaZMQ()
@@ -108,6 +114,7 @@ def main(args=None):
         factr_teleop_franka_zmq.shut_down()
     finally:
         rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()

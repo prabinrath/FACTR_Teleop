@@ -6,9 +6,7 @@ import subprocess
 import yaml
 from abc import ABC, abstractmethod
 
-import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import JointState
 
 from factr_teleop.dynamixel.driver import DynamixelDriver
 from python_utils.utils import get_workspace_root
@@ -28,7 +26,6 @@ def find_ttyusb(port_name):
             raise Exception(f"The port '{port_name}' does not correspond to a ttyUSB device. It links to {resolved_path}.")
     except Exception as e:
         raise Exception(f"Unable to resolve the symbolic link for '{port_name}'. {e}")
-
 
 
 class FACTRTeleopFranka(Node, ABC):
@@ -260,7 +257,6 @@ class FACTRTeleopFranka(Node, ABC):
 
 
     def friction_compensation(self, arm_joint_vel):
-        # static friction compensation
         tau_ss = np.zeros(self.num_arm_joints)
         for i in range(self.num_arm_joints):
             if abs(arm_joint_vel[i]) < self.stiction_comp_enable_speed:
@@ -309,30 +305,95 @@ class FACTRTeleopFranka(Node, ABC):
             torque_gripper += self.gripper_feedback(gripper_feedback)
 
         self.set_leader_joint_torque(torque_arm, torque_gripper)
-
         self.update_communication(leader_arm_pos, leader_gripper_pos)
 
 
     @abstractmethod
     def set_up_communication(self):
+        """
+        This method should be implemented to set up communication between the leader arm
+        and the follower arm for bilateral teleoperation. This method is called once
+        in the __init__ method.
+        
+        For example, a subscriber can  be set up to receive external joint torque from 
+        the leader arm and a publisher can be set up to send joint position target commands 
+        to the follower arm. Publishers and subscribers can also be set up to record
+        the follower arm's joint states
+
+        Raises:
+            NotImplementedError: If the method is not implemented in a subclass.
+        """
         pass
 
 
     @abstractmethod
     def get_leader_arm_external_joint_torque(self):
+        """
+        This method should retrieve the current external joint torque from the follower arm.
+        This is used to compute force-feedback in the leader arm. This method is called at
+        every iteration of the control loop if self.enable_torque_feedback is set to True.
+
+        Returns:
+            np.ndarray: A NumPy array of shape (num_arm_joints,) containing the external 
+            joint torques. 
+
+        Raises:
+            NotImplementedError: If the method is not implemented in a subclass.
+        """
         pass
 
 
     @abstractmethod
     def get_leader_gripper_feedback(self):
+        """
+        This method should retrieve any data from the follower gripper that might be required
+        to achieve force-feedback in the leader gripper. For example, this method can be used
+        to get the current position of the follower gripper for position-position force-feedback
+        or the current force of the follower gripper for position-force force-feedback in the
+        leader gripper. This method is called at every iteration of the control loop if 
+        self.enable_gripper_feedback is set to True.
+
+        Returns:
+            Any: Feedback data required by the leader gripper. This can be a NumPy array, a 
+            scalar, or any other data type depending on the implementation.
+
+        Raises:
+            NotImplementedError: If the method is not implemented in a subclass.
+        """
         pass
 
 
     @abstractmethod
     def gripper_feedback(self, gripper_feedback):
+        """
+        Processes feedback data from the follower gripper. This method is intended to compute 
+        force-feedback for the leader gripper. This method is called at every iteration of the 
+        control loop if self.enable_gripper_feedback is set to True.
+
+        Args:
+            gripper_feedback (Any): Feedback data from the gripper. The format can vary depending 
+            on the implementation, such as a NumPy array, scalar, or custom object.
+        
+        Returns:
+            float: The computed joint torque value to apply force-feedback to the leader gripper.
+
+        Raises:
+            NotImplementedError: If the method is not implemented in a subclass.
+        """
         pass
 
 
     @abstractmethod
     def update_communication(self, leader_arm_pos, leader_gripper_pos):
+        """
+        This method is intended to be called at every iteration of the control loop to transmit 
+        relevant data, such as joint position targets, from the leader to the follower arm.
+
+        Args:
+            leader_arm_pos (np.ndarray): A NumPy array containing the joint positions of the leader arm.
+            leader_gripper_pos (np.ndarray): A NumPy array containing the position of the leader gripper.
+
+        Raises:
+            NotImplementedError: If the method is not implemented in a subclass.
+        """
         pass
