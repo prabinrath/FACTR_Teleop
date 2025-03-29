@@ -267,3 +267,5 @@ ros2 launch launch/factr_teleop_grav_comp_demo.py
 ```
 
 **Note:** You can fine-tune gravity compensation by adjusting the **`gain`** parameter under **`gravity_comp`** in the YAML file. Increasing the gain applies stronger gravity compensation; decreasing it reduces the effect.
+
+

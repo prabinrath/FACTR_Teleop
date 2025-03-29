@@ -15,32 +15,10 @@ _Carnegie Mellon University_
 
 ## Catalog
 - [Installation](#installation)
+- [FACTR Teleop](#factr-teleop)
 - [Data Collection](#data-collection)
 - [Policy Rollout](#policy-rollout)
 - [Citation](#citation)
-  
-<!-- ## Installation
-
-Our repository requires ROS2. If not already installed, follow [ROS2 Installation Instructions](https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html) to install ROS2.
-We provide the following ROS2 packages
-- factr_teleop
-- bc
-- cameras
-- python_utils
-
-These packages are located at 
-<repo_root>/src
-
-These packages must exist inside of a ROS2 workspace. If you do not have an existing ROS2 Workspace then create a [workspace](https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html).
-
-Copy the four provided packages into your workspace and build the workspace. See [ROS2 Tutorial](https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html) for further help and then rebuild your workspace using colcon.
-
-Then install the following python packages:
-pip install zmq
-python -m pip install pin
-
-Then cd into <repo_root>/src/factr_teleop/factr_teleop/dynamixel, run
-pip install -e python -->
 
 
 ## Installation
@@ -92,6 +70,11 @@ Finally, navigate to the Dynamixel submodule and install it via:
 cd <repo_root>/src/factr_teleop/factr_teleop/dynamixel
 pip install -e python
 ```
+
+
+## FACTR Teleop
+Instructions for setting up FACTR leader arms and running the provided example demos can be found 
+[here](src/factr_teleop/README.md).
 
 
 
@@ -146,7 +129,17 @@ We provide a sample rollout script in ROS2. Again, custom nodes for robots and s
 ```bash
 ros2 launch factr_teleop/launch/rollout.py
 ```
-Please checkout [rollout.py](factr_teleop/launch/rollout.py) for details about configurations.
+Please checkout [rollout.py](launch/rollout.py) for details about configurations.
+
+
+## License & Acknowledgements
+This source code is licensed under the Apache 2.0 liscence found in the LICENSE file in the root directory of this repository.
+
+This project builds on top of or utilizes the following third party dependencies.
+- [GELLO](https://wuphilipp.github.io/gello_site/): Inpiration for this work.
+- [ZMQ](https://zeromq.org/): Light-weight communication between python processes.
+- [Pinocchio](https://stack-of-tasks.github.io/pinocchio/): Fast kinematics and dynamics computation for manipulation.
+
 
 ## Citation
 If you find this codebase useful, feel free to cite our work!
