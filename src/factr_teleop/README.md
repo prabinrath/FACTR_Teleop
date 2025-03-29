@@ -1,16 +1,16 @@
 
-## Setting up Dynamixel Servos
+# Setting up Dynamixel Servos
 Before launching the FACTR teleop leader arms, the leader arms' Dynamixel servos need to be properly
 configured. Please install the [Dynamixel Wizard](https://emanual.robotis.com/docs/en/software/dynamixel/dynamixel_wizard2/)
 software.
 
-### Update Servo IDs
+## Update Servo IDs
 By default, all Dynamixel servos are set to ID 1. To control multiple servos with a single U2D2 controller, 
 each servo must be assigned a unique ID. This assignment should be done one servo at a time, starting with 
 the servo closest to the robot base and progressing up the kinematic chain. Assign IDs sequentially from 
 1 up to 8, with the gripper trigger servo holding ID 8.
 
-#### Steps to Change a Servo's ID:
+### Steps to Change a Servo's ID:
 1. **Connect a single servo to the U2D2 controller.**
 2. **Launch the Dynamixel Wizard software.**
 3. **Configure the scanning settings:**
@@ -25,11 +25,11 @@ the servo closest to the robot base and progressing up the kinematic chain. Assi
 6. **Repeat** the above steps for each servo.
 
 
-### Increase Servo Control Frequency
+## Increase Servo Control Frequency
 There are additional Dynamixel servo settings that must be changed in order to run the control loop at
 a frequency as fast as 500Hz. The steps for each servo are as follows:
 
-#### Steps to Increase Servo Control Frequency:
+### Steps to Increase Servo Control Frequency:
 1. **Launch the Dynamixel Wizard software** and **scan for servos**.
 2. **Select each detected servo** from the left-hand panel.
 3. In the middle panel, click **"Baud Rate (Bus)"**:
@@ -38,11 +38,10 @@ a frequency as fast as 500Hz. The steps for each servo are as follows:
    - On the right-hand panel, **set the value to 0** and click **Save**.
 
 
-
 In addition to the Dynamixel servo settings, it is crucial to minimize the latency of the USB port connected to the U2D2 controller
 to achieve high-frequency control. The latency timer should be set to `1` for optimal performance.
 
-#### Steps to Check and Set USB Port Latency:
+### Steps to Check and Set USB Port Latency:
 
 1. **List connected U2D2 devices**:
    ```bash
@@ -72,12 +71,15 @@ to achieve high-frequency control. The latency timer should be set to `1` for op
 
 4. **If the value is not `1`, set it manually**:
    ```bash
-   echo 1 | sudo tee /sys/bus/usb-serial/devices/{ttyUSBx}/latency_timer
+   echo 1 | sudo tee /sys/bus/usb-serial/devices/<ttyUSBx>/latency_timer
    ```
    > **Note:** This command requires `sudo` permissions.
 
+   > **Note:** Everytime the U2D2 controller USB is re-plugged into the computer, this command needs to be run again to ensure the
+   latency timer is 1.
 
-#### Automated Latency Check
+
+### Automated Latency Check
 
 Note that the provided leader arm node **automatically checks** the latency timer when initializing the `FACTRTeleopFranka` class. 
 It reads the `dynamixel_port` from the YAML config file and verifies that the latency timer is set to `1`.
@@ -90,5 +92,144 @@ Since changing the latency timer requires `sudo` permissions, **you must run the
 
 
 
-## Creating FACTR Teleop Configuration
+
+
+# Preparing to Launch FACTR Teleop
+
+## Implementing a Subclass of `FACTRTeleopFranka`
+
+Before running the FACTR teleoperation scripts, you must create a **subclass** of the `FACTRTeleopFranka` base class, located at:
+
+```
+<repo_root>/src/factr_teleop/factr_teleop/factr_teleop_franka.py
+```
+
+### What is `FACTRTeleopFranka`?
+
+`FACTRTeleopFranka` is the core base class for implementing the FACTR low-cost, force-feedback teleoperation system for a **Franka Emika Panda** robot as the follower arm. It includes the full control loop for the **leader arm**, and provides support for:
+
+- Gravity compensation  
+- Null-space regulation  
+- Friction compensation  
+- Force-feedback
+
+### Why Subclass It?
+
+Force-feedback teleoperation requires **bi-directional communication** between the leader and follower arms. Since communication mechanisms vary across systems, **users are responsible for implementing this communication layer** by subclassing `FACTRTeleopFranka`.
+
+Your subclass must implement abstract methods that achieve functions such as:
+
+- Receiving **joint torque data** from the follower (for force-feedback)
+- Publishing **joint position targets** to the follower
+- Sending and receiving force-feedback signals for the **gripper** (gripper-specific implementation is left to the user)
+- ...
+
+This design allows easy integration with your existing communication pipeline or custom framework.
+
+### Provided Example: ZMQ Implementation
+
+We provide an example subclass:  
+```
+<repo_root>/src/factr_teleop/factr_teleop/factr_teleop_franka_zmq.py
+```
+
+This implementation, `FACTRTeleopFrankaZMQ`, demonstrates:
+
+- How to use **ZMQ** for communication between leader and follower arms  
+- An example of **gripper force-feedback** using a Dynamixel servo-based gripper
+
+Use this as a reference or starting point when creating your own subclass tailored to your setup.
+
+
+
+
+## Creating a FACTR Teleop Configuration YAML File
+
+Each leader arm requires its own YAML configuration file used by `FACTRTeleopFranka`, located in:
+
+```
+<repo_root>/src/factr_teleop/factr_teleop/configs
+```
+
+We provide an example configuration file here:
+
+```
+<repo_root>/src/factr_teleop/factr_teleop/configs/franka_example.yaml
+```
+
+This file contains all necessary parameters for initializing and running the FACTR teleop system. Below is a breakdown of key fields and how to configure them.
+
+---
+
+### `dynamixel` Settings
+
+- **`dynamixel_port`**:  
+  Specify the correct USB port for the U2D2 controller connected to the leader arm. You can find it by running:
+  ```bash
+  ls /dev/serial/by-id/
+  ```
+  Select the device name corresponding to your leader arm.
+
+- **`joint_signs`**:  
+  After starting teleoperation, some follower arm joints may move in the opposite direction of the leader arm.
+  This can be corrected by changing the sign (`1` or `-1`) for each joint.
+
+  If the leader arm is assembled exactly according to the build instructions (especially servo orientation), these signs do **not** need to be changed.
+
+---
+
+### `initialization` Settings
+
+- **`calibration_joint_pos`**:  
+  This is the joint configuration of the leader arm at startup, used for calibration with the follower arm.  
+  When the teleop node is launched, the script calibrates the Dynamixel servos with respect to the Franka arm to ensure the joint
+  position readings of the leader arm correspond to those of the follower arm.
+
+  > **Important**: Before launching the program, physically place the leader arm into a configuration specified by `calibration_joint_pos`.
+
+  In the provided `franka_example.yaml`, this configuration corresponds to the image below:
+
+  ![Figure 1](./resource/figure_1.png)
+
+  **Figure 1**: `calibration_joint_pos` in `franka_example.yaml`.
+
+  It is recommended to set calibration_joint_pos to a stable, resting configuration that does not require someone to hold up the leader arm (as shown in Figure 2). This makes it more convenient to launch the program.
+
+  ![Figure 2](./resource/figure_2.png)
+
+  **Figure 2**: Resting configuration.
+
+- **`initial_match_joint_pos`**:  
+  This is the joint configuration the leader arm must be manually moved to **before** the follower arm begins mirroring it.  
+  It should match the initial/current joint position of the Franka follower arm. In the provided example, this also corresponds 
+  to the configuration shown in Figure 1.
+
+
+
+
+## FACTR Teleop Start-Up Procedure
+
+Once the subclass and YAML configuration file have been prepared, you are ready to launch the FACTR force-feedback teleoperation system. The following steps outline the startup procedure and what to expect following launching:
+
+1. **Manually move the leader arm** to the joint configuration specified by the `calibration_joint_pos` parameter in the YAML file.
+   - This ensures proper calibration with the follower arm.
+   - **Important**: Also position the **leader gripper trigger** to correspond to the **closed state** of the follower gripper.
+
+2. **Launch the teleop node** using your custom launch file. For example, from the `<repo_root>` directory:
+   ```bash
+   ros2 launch launch/factr_teleop.py
+   ```
+
+3. **Check USB latency timer** (automated):
+   - If the USB latency timer is **not set to 1**, the script will exit with an error and print the command needed to fix it:
+     ```bash
+     echo 1 | sudo tee /sys/bus/usb-serial/devices/<ttyUSBx>/latency_timer
+     ```
+   - This process is explained in more detail in the [USB Latency section](#minimizing-usb-port-latency-for-u2d2).
+   - After setting the correct latency, **re-run the launch command**.
+
+4. **Match the leader arm to `initial_match_joint_pos`**:
+   - Once the script runs without errors, follow the terminal prompt to move the leader arm to the joint configuration specified by `initial_match_joint_pos`.
+   - When the position is matched, teleoperation will automatically begin — enabling gravity compensation, null-space control, and force-feedback.
+
 
