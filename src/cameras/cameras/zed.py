@@ -1,16 +1,31 @@
+# ---------------------------------------------------------------------------
+# FACTR: Force-Attending Curriculum Training for Contact-Rich Policy Learning
+# https://arxiv.org/abs/2502.17432
+# Copyright (c) 2025 Jason Jingzhou Liu and Yulong Li
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ---------------------------------------------------------------------------
+
 import cv2
+import time
 import pyzed.sl as sl
+
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String, Bool  # You can customize the message type
 from sensor_msgs.msg import Image
-from geometry_msgs.msg import PoseStamped
+
 from cv_bridge import CvBridge
-import threading
-import os
-import time
-import numpy as np
-import pickle
+
 
 class ZedNode(Node):
     def __init__(self):
@@ -31,15 +46,13 @@ class ZedNode(Node):
         
         self.trackers = {}
         self.bridge = CvBridge()
-        self.timer = self.create_timer(1/self.camera_fps, self.timer_callback) # might go back to 30hz -> see if 100 works better
+        self.timer = self.create_timer(1/self.camera_fps, self.timer_callback)
 
         
     def initialize_cameras(self):
         all_detected_cameras = sl.Camera.get_device_list()
-        
         init_params = sl.InitParameters()
-        
-        init_params.camera_resolution = sl.RESOLUTION.HD720 #sl.RESOLUTION.HD720
+        init_params.camera_resolution = sl.RESOLUTION.HD720
         init_params.camera_fps = self.camera_fps
         init_params.coordinate_units = sl.UNIT.METER
         init_params.coordinate_system = sl.COORDINATE_SYSTEM.IMAGE #sl.COORDINATE_SYSTEM.RIGHT_HANDED_Z_UP
@@ -74,7 +87,6 @@ class ZedNode(Node):
 
     def timer_callback(self):
         # self.get_logger().info(f"ZED alive")
-
         start = time.time()
         err = self.zed.grab()
         if err != sl.ERROR_CODE.SUCCESS:

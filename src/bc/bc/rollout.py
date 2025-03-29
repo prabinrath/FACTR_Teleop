@@ -1,10 +1,28 @@
 
-import numpy as np
+# ---------------------------------------------------------------------------
+# FACTR: Force-Attending Curriculum Training for Contact-Rich Policy Learning
+# https://arxiv.org/abs/2502.17432
+# Copyright (c) 2025 Jason Jingzhou Liu and Yulong Li
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ---------------------------------------------------------------------------
+
 import yaml
-from pathlib import Path
-from cv_bridge import CvBridge
 import copy
 import functools
+import numpy as np
+from pathlib import Path
+from cv_bridge import CvBridge
 from collections import defaultdict, deque
 
 import rclpy
@@ -18,10 +36,9 @@ add_external_path("scripts")
 from data_process_utils import to_eef, apply_delta_eef
 
 class Rollout(Node):
-    
     def __init__(self):
         super().__init__('rollout_node')
-        
+
         self.data_dir = Path(self.declare_parameter('data_dir', "").get_parameter_value().string_value)
         self.init_rollout_config()
         self.state_obs = defaultdict(lambda: deque(maxlen=20))
@@ -76,20 +93,17 @@ class Rollout(Node):
             self.action_publishers[action_topic] = self.create_publisher(JointState, action_topic, 10)
     
     def decode_action(self, action):
-        
         # unnormalize action
         if self.action_norm_stats is not None:
             mean = np.array(self.action_norm_stats["mean"])
             std = np.array(self.action_norm_stats["std"])
             action = action * std + mean
-        
         # decode action
         dim_pointer = 0
         action_dict = {}
         for action_key, action_dim in self.action_dim_dict.items():
             action_dict[action_key] = action[dim_pointer:dim_pointer+action_dim]
             dim_pointer += action_dim
-        
         return action_dict
         
     def send_command(self, action_dict: dict):

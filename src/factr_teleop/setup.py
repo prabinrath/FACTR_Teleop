@@ -13,7 +13,7 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='Jason Jingzhou Liu',
+    maintainer='Jason Jingzhou Liu and Yulong Li',
     maintainer_email='liujason@cmu.edu',
     description='FACTR low-cost force-feedback teleoperation',
     license='Apache-2.0',

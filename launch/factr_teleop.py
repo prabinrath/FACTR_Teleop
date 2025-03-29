@@ -16,16 +16,25 @@
 # limitations under the License.
 # ---------------------------------------------------------------------------
 
+from launch import LaunchDescription
+from launch_ros.actions import Node
 
-import os
-import sys
+from launch import LaunchDescription
+from launch_ros.actions import Node
 
-def get_workspace_root():
-    workspace_installation_root = os.environ.get('COLCON_PREFIX_PATH', '').split(os.pathsep)[0]
-    workspace_root = os.path.abspath(os.path.join(workspace_installation_root, '..'))
-    return workspace_root
 
-def add_external_path(path):
-    workspace_root = get_workspace_root()
-    sys.path.append(os.path.join(workspace_root, path))
+def generate_launch_description():
+    factr_teleop_franka_right = Node(
+        package='factr_teleop',
+        executable='factr_teleop_franka',
+        name='factr_teleop_franka_right',
+        output='screen',
+        emulate_tty=True,
+        parameters=[
+            {"config_file": "franka_right.yaml"}
+        ]
+    )
 
+    return LaunchDescription([
+        factr_teleop_franka_right,
+    ])

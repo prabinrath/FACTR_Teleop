@@ -16,8 +16,9 @@
 # limitations under the License.
 # ---------------------------------------------------------------------------
 
-import numpy as np
+
 import time
+import numpy as np
 
 import rclpy
 from sensor_msgs.msg import JointState

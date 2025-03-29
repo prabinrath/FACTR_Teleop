@@ -1,13 +1,30 @@
+# ---------------------------------------------------------------------------
+# FACTR: Force-Attending Curriculum Training for Contact-Rich Policy Learning
+# https://arxiv.org/abs/2502.17432
+# Copyright (c) 2025 Jason Jingzhou Liu and Yulong Li
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ---------------------------------------------------------------------------
+
 import numpy as np
-import zmq
 import threading
+import zmq
 
 
 class ZMQSubscriber:
     """
     Creates a thread that subscribes to a ZMQ publisher
     """
-
     def __init__(self, ip_address="tcp://192.168.1.3:2096", verbose=False):
         context = zmq.Context()
         self._sub_socket = context.socket(zmq.SUB)
@@ -39,7 +56,6 @@ class ZMQPublisher:
     """
     Creates a thread that publishes to a ZMQ subscriber
     """
-
     def __init__(self, ip_address="tcp://192.168.1.3:2096"):
         context = zmq.Context()
         self._pub_socket = context.socket(zmq.PUB)

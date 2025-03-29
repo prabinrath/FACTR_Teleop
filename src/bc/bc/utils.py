@@ -1,12 +1,30 @@
+# ---------------------------------------------------------------------------
+# FACTR: Force-Attending Curriculum Training for Contact-Rich Policy Learning
+# https://arxiv.org/abs/2502.17432
+# Copyright (c) 2025 Jason Jingzhou Liu and Yulong Li
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ---------------------------------------------------------------------------
+
+
+import cv2
+import numpy as np
 
 from sensor_msgs.msg import JointState, Image
 from geometry_msgs.msg import PoseArray, PoseStamped
 
-from collections import namedtuple
-import numpy as np
-import cv2
-
 from cv_bridge import CvBridge
+
 
 def ros2_time_to_ns(ros2_time):
     return int(ros2_time.sec * 1e9 + ros2_time.nanosec)
@@ -17,9 +35,7 @@ def create_joint_state_msg(data):
     return msg
 
 def process_msg(msg):
-    
     cv_bridge = CvBridge()
-    
     if isinstance(msg, JointState):
         data = np.array(msg.position)
     elif isinstance(msg, PoseArray):

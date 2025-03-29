@@ -13,10 +13,10 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='factr',
-    maintainer_email='jason_liu1116@hotmail.com',
-    description='TODO: Package description',
-    license='TODO: License declaration',
+    maintainer='Jason Jingzhou Liu and Yulong Li',
+    maintainer_email='liujason@cmu.edu',
+    description='Nodes for running cameras.',
+    license='Apache-2.0',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [

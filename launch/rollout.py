@@ -1,23 +1,29 @@
-#!/usr/bin/env python3
+# ---------------------------------------------------------------------------
+# FACTR: Force-Attending Curriculum Training for Contact-Rich Policy Learning
+# https://arxiv.org/abs/2502.17432
+# Copyright (c) 2025 Jason Jingzhou Liu and Yulong Li
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ---------------------------------------------------------------------------
 
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
 from launch import LaunchDescription
 from launch_ros.actions import Node
-
-real_robot = True
-
-if real_robot:
-    torque_feedback = True
-else:
-    torque_feedback = False
-
-torque_feedback = True
 
 
 def generate_launch_description():
-
     gripper_node = Node(
         package='gripper',
         executable='gripper',
@@ -25,8 +31,8 @@ def generate_launch_description():
         output='screen',
         emulate_tty=True,
         parameters=[
-            {"connect_to_real": real_robot},
-            {"torque_feedback": torque_feedback},
+            {"connect_to_real": True},
+            {"torque_feedback": True},
             {"is_left": False},
         ]
     )
@@ -49,8 +55,8 @@ def generate_launch_description():
         name='franka_bridge_node',          
         output='screen',                
         parameters=[
-            {"connect_to_real": real_robot},
-            {"torque_feedback": torque_feedback},
+            {"connect_to_real": True},
+            {"torque_feedback": True},
         ]
     )
     

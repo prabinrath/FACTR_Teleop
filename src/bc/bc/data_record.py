@@ -1,20 +1,35 @@
+# ---------------------------------------------------------------------------
+# FACTR: Force-Attending Curriculum Training for Contact-Rich Policy Learning
+# https://arxiv.org/abs/2502.17432
+# Copyright (c) 2025 Jason Jingzhou Liu and Yulong Li
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ---------------------------------------------------------------------------
 
 import rclpy
 from rclpy.node import Node
 from pynput import keyboard
 
 import pickle
-from termcolor import colored
 from pathlib import Path
+from termcolor import colored
 
-from python_utils.utils import get_workspace_root
 from bc import utils
-
 from sensor_msgs.msg import JointState, Image
+from python_utils.utils import get_workspace_root
 
 
 class DataRecord(Node):
-                
     def __init__(self, name="data_record_node"):
         super().__init__(name)
 
@@ -49,14 +64,12 @@ class DataRecord(Node):
         
         self.get_logger().info(colored(f"{self.topics_to_record}", 'green'))
     
-    
     def get_timestamp(self):
         current_time = self.get_clock().now().to_msg()
         time_ns = utils.ros2_time_to_ns(current_time)
         return time_ns
     
     def create_callback(self, topic_name):
-        
         def callback(msg):
             if not self.recording:
                 return
@@ -65,7 +78,6 @@ class DataRecord(Node):
             self.data_log["data"][topic_name].append(data)
             self.data_log["timestamps"][topic_name].append(time_ns)
             self.data_log["all_timestamps"].append(time_ns)
-
         return callback
 
     def save_data(self, ep_index):

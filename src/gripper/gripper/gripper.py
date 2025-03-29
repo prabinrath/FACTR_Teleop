@@ -10,7 +10,7 @@ from gripper.dynamixel.driver import DynamixelDriver
 
 from std_msgs.msg import Header
 from python_utils.global_configs import left_gripper_configs, right_gripper_configs
-from python_utils.global_configs import right_GELLO_gripper_configs
+from python_utils.global_configs import right_factr_teleop_gripper_configs
 
 from sensor_msgs.msg import JointState
 
@@ -60,7 +60,7 @@ class Gripper(Node):
         self.gripper_limit_min = -0.3
 
         # teleop gripper limits
-        self.teleop_gripper_limits = right_GELLO_gripper_configs["joint_limits"]
+        self.teleop_gripper_limits = right_factr_teleop_gripper_configs["joint_limits"]
 
         self.gripper_pos_prev = 0.0
         self.gripper_pos = 0.0

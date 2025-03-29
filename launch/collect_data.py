@@ -21,15 +21,6 @@ from launch_ros.actions import Node
 
 from launch import LaunchDescription
 from launch_ros.actions import Node
-real_robot = True
-
-if real_robot:
-    torque_feedback = True
-else:
-    torque_feedback = False
-
-torque_feedback = True
-
 
 def generate_launch_description():
 
@@ -75,8 +66,8 @@ def generate_launch_description():
         output='screen',
         emulate_tty=True,
         parameters=[
-            {"connect_to_real": real_robot},
-            {"torque_feedback": torque_feedback},
+            {"connect_to_real": True},
+            {"torque_feedback": True},
             {"is_left": False},
         ]
     )
@@ -95,7 +86,7 @@ def generate_launch_description():
     
     return LaunchDescription([
         factr_teleop_franka_right,
-        # gripper_right_node,
-        # data_record_node,
-        # zed_node
+        gripper_right_node,
+        data_record_node,
+        zed_node
     ])

@@ -1,16 +1,33 @@
+# ---------------------------------------------------------------------------
+# FACTR: Force-Attending Curriculum Training for Contact-Rich Policy Learning
+# https://arxiv.org/abs/2502.17432
+# Copyright (c) 2025 Jason Jingzhou Liu and Yulong Li
 
-import numpy as np
-from collections import deque
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ---------------------------------------------------------------------------
+
 import cv2
 import torch
 import hydra
 import yaml
 import rclpy
-from pathlib import Path
-import datetime
 import pickle
-from collections import defaultdict
+import datetime
+import numpy as np
+from pathlib import Path
 from pynput import keyboard
+from collections import deque
+from collections import defaultdict
 from data4robotics import misc
 
 from python_utils.utils import add_external_path
@@ -21,15 +38,11 @@ from data_process_utils import process_decoded_image
 from bc.rollout import Rollout
 
 class PolicyRollout(Rollout):
-    
     def __init__(self):
         super().__init__()
-
         self.declare_parameter('save_data', False)
-        
         # init agent
         self.init_agent()
-        
         # initalize temporal ensemble
         self.pred_horizon = 30
         self.exp_weight = 0.1
@@ -42,7 +55,6 @@ class PolicyRollout(Rollout):
         # obs config
         self.img_chunk = 1
         self.state_chunk = 1
-        
         # initialize data dumping
         self.is_save_data = self.get_parameter('save_data').value
         if self.is_save_data:
@@ -130,6 +142,7 @@ class PolicyRollout(Rollout):
             step_obs = np.concatenate(step_obs, axis=-1)
             state_obs.append(step_obs)
         state_obs = np.array(state_obs)
+
         # normalize state
         if self.state_norm_stats is not None:
             mean = np.array(self.state_norm_stats["mean"])
@@ -184,6 +197,7 @@ class PolicyRollout(Rollout):
                 return
         except Exception as e:
             self.get_logger().info(f"Error saving data: {e}")
+
 
 def main(args=None):
     rclpy.init(args=args)
