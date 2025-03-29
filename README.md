@@ -132,7 +132,7 @@ ros2 launch factr_teleop/launch/rollout.py
 Please checkout [rollout.py](launch/rollout.py) for details about configurations.
 
 
-## License & Acknowledgements
+## License and Acknowledgements
 This source code is licensed under the Apache 2.0 liscence found in the LICENSE file in the root directory of this repository.
 
 This project builds on top of or utilizes the following third party dependencies.
