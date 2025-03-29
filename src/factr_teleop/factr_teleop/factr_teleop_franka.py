@@ -30,6 +30,9 @@ from factr_teleop.dynamixel.driver import DynamixelDriver
 
 
 def find_ttyusb(port_name):
+    """
+    This function is used to locate the underlying ttyUSB device.
+    """
     base_path = "/dev/serial/by-id/"
     full_path = os.path.join(base_path, port_name)
     if not os.path.exists(full_path):
@@ -40,7 +43,9 @@ def find_ttyusb(port_name):
         if actual_device.startswith("ttyUSB"):
             return actual_device
         else:
-            raise Exception(f"The port '{port_name}' does not correspond to a ttyUSB device. It links to {resolved_path}.")
+            raise Exception(
+                f"The port '{port_name}' does not correspond to a ttyUSB device. It links to {resolved_path}."
+            )
     except Exception as e:
         raise Exception(f"Unable to resolve the symbolic link for '{port_name}'. {e}")
 
@@ -405,6 +410,15 @@ class FACTRTeleopFranka(Node, ABC):
 
 
     def control_loop_callback(self):
+        """
+        Runs the main control loop of the leader arm. 
+
+        Note that while the control loop can run at up to 500 Hz, lower frequencies 
+        such as 200 Hz can still yield comparable performance, although they may 
+        require additional tuning of control parameters. For Dynamixel servos to 
+        support a 500 Hz control frequency, ensure that the Baud Rate is set to 4 Mbps 
+        and the Return Delay Time is set to 0 using the Dynamixel Wizard software.
+        """
         leader_arm_pos, leader_arm_vel, leader_gripper_pos, leader_gripper_vel = self.get_leader_joint_states()
 
         torque_arm = np.zeros(self.num_arm_joints)

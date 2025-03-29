@@ -20,7 +20,7 @@
 # ---------------------------------------------------------------------------
 
 
-from threading import Event, Lock, Thread
+from threading import Lock
 from typing import Protocol, Sequence
 
 import numpy as np
