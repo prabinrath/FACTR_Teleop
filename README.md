@@ -1,5 +1,5 @@
 
-<h1> Force-Feedback Teleoperation (FACTR teleop) </h1>
+<h1> FACTR Teleop: Low-Cost Force-Feedback Teleoperation</h1>
 
 
 
@@ -24,7 +24,7 @@ _Carnegie Mellon University_
 ## Installation
 
 This repository requires **ROS 2**.
-If you have nott installed ROS 2 yet, follow the official [ROS 2 installation guide](https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html).
+If you have not installed ROS 2 yet, follow the official [ROS 2 installation guide](https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html).
 
 ### Provided ROS 2 Packages
 
