@@ -18,6 +18,7 @@ _Carnegie Mellon University_
 - [FACTR Teleop](#factr-teleop)
 - [Data Collection](#data-collection)
 - [Policy Rollout](#policy-rollout)
+- [License and Acknowledgements](#license-and-acknowledgements)
 - [Citation](#citation)
 
 
