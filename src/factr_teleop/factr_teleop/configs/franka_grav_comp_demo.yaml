@@ -1,4 +1,4 @@
-name: right
+name: franka_grav_comp_demo
 
 dynamixel:
   # USB port name given by the command: ls /dev/serial/by-id/
@@ -19,7 +19,7 @@ gripper_teleop:
 
 controller:
   torque_feedback:
-    enable: True
+    enable: False
     gain: 3.0
     damping: 0.0
     motor_scalar: 94.5652173913
@@ -42,8 +42,6 @@ controller:
     kd: 0.04315069084
 
   gripper_feedback:
-    enable: True
-    gain: 0.28328611898
-    ema_beta: 0.95
+    enable: False
 
 

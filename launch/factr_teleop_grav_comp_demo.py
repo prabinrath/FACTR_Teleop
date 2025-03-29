@@ -20,17 +20,17 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 
 def generate_launch_description():
-    factr_teleop_franka = Node(
+    factr_teleop_franka_grav_comp_demo = Node(
         package='factr_teleop',
-        executable='factr_teleop_franka',
+        executable='factr_teleop_franka_grav_comp_demo',
         name='factr_teleop_franka',
         output='screen',
         emulate_tty=True,
         parameters=[
-            {"config_file": "franka_example.yaml"}
+            {"config_file": "franka_grav_comp_demo.yaml"}
         ]
     )
 
     return LaunchDescription([
-        factr_teleop_franka,
+        factr_teleop_franka_grav_comp_demo,
     ])

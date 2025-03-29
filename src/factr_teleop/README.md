@@ -141,6 +141,16 @@ This implementation, `FACTRTeleopFrankaZMQ`, demonstrates:
 Use this as a reference or starting point when creating your own subclass tailored to your setup.
 
 
+**Note:** If you create a custom subclass, make sure to add it under the `entry_points` section in this package's `setup.py`.
+Here's the provided example in `setup.py`:
+```python
+entry_points={
+    'console_scripts': [
+        'factr_teleop_franka = factr_teleop.factr_teleop_franka_zmq:main',
+        'factr_teleop_franka_grav_comp_demo = factr_teleop.factr_teleop_franka_grav_comp_demo:main',
+    ],
+},
+```
 
 
 ## Creating a FACTR Teleop Configuration YAML File
@@ -207,7 +217,7 @@ This file contains all necessary parameters for initializing and running the FAC
 
 
 
-## FACTR Teleop Start-Up Procedure
+# FACTR Teleop Start-Up Procedure
 
 Once the subclass and YAML configuration file have been prepared, you are ready to launch the FACTR force-feedback teleoperation system. The following steps outline the startup procedure and what to expect following launching:
 
@@ -233,3 +243,28 @@ Once the subclass and YAML configuration file have been prepared, you are ready 
    - When the position is matched, teleoperation will automatically begin — enabling gravity compensation, null-space control, and force-feedback.
 
 
+## Gravity Compensation Demo
+
+We provide an additional example that does **not** communicate with or send commands to a follower Franka arm, and can therefore be launched readily
+without additional user implementations — as long as the **`dynamixel_port`** parameter is correctly configured in the YAML file.
+
+This demo showcases the **gravity compensation** and **null-space regulation** functionalities of the leader arm.
+
+- The subclass used for this example is `FACTRTeleopFrankaGravComp`, located at:
+  ```
+  <repo_root>/src/factr_teleop/factr_teleop/factr_teleop_franka_grav_comp_demo.py
+  ```
+
+- The corresponding YAML configuration file is:
+  ```
+  <repo_root>/src/factr_teleop/factr_teleop/configs/franka_grav_comp_demo.yaml
+  ```
+
+To launch the demo, run:
+
+```bash
+ros2 launch launch/factr_teleop_grav_comp_demo.py
+```
+
+**Note:** You can fine-tune gravity compensation by adjusting the **`gain`** parameter under **`gravity_comp`** in the YAML file.  
+Increasing the gain applies stronger gravity compensation; decreasing it reduces the effect.
