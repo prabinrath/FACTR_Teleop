@@ -1,6 +1,6 @@
 
 # Setting up Dynamixel Servos
-Before launching the FACTR teleop leader arms, the leader arms' Dynamixel servos need to be properly
+Before launching the FACTR teleop leader arms, the leader arm's Dynamixel servos need to be properly
 configured. Please install the [Dynamixel Wizard](https://emanual.robotis.com/docs/en/software/dynamixel/dynamixel_wizard2/)
 software.
 
@@ -216,7 +216,6 @@ This file contains all necessary parameters for initializing and running the FAC
 
 
 
-
 # FACTR Teleop Start-Up Procedure
 
 Once the subclass and YAML configuration file have been prepared, you are ready to launch the FACTR force-feedback teleoperation system. The following steps outline the startup procedure and what to expect following launching:
@@ -235,16 +234,17 @@ Once the subclass and YAML configuration file have been prepared, you are ready 
      ```bash
      echo 1 | sudo tee /sys/bus/usb-serial/devices/<ttyUSBx>/latency_timer
      ```
-   - This process is explained in more detail in the [USB Latency section](#minimizing-usb-port-latency-for-u2d2).
+   - This process is explained in more detail in the [USB Latency section](#steps-to-check-and-set-usb-port-latency).
    - After setting the correct latency, **re-run the launch command**.
 
 4. **Match the leader arm to `initial_match_joint_pos`**:
    - Once the script runs without errors, follow the terminal prompt to move the leader arm to the joint configuration specified by `initial_match_joint_pos`.
    - When the position is matched, teleoperation will automatically begin — enabling gravity compensation, null-space control, and force-feedback.
 
+**Note:** After terminating the program, the leader arm is intended to apply zero torque and power off automatically. However, this may not always occur as expected.  If the arm remains powered, simply unplug and re-plug the leader arm's power cord to fully power it off.
+
 
 ## Gravity Compensation Demo
-
 We provide an additional example that does **not** communicate with or send commands to a follower Franka arm, and can therefore be launched readily
 without additional user implementations — as long as the **`dynamixel_port`** parameter is correctly configured in the YAML file.
 
@@ -260,11 +260,10 @@ This demo showcases the **gravity compensation** and **null-space regulation** f
   <repo_root>/src/factr_teleop/factr_teleop/configs/franka_grav_comp_demo.yaml
   ```
 
-To launch the demo, run:
+To launch the demo, ensure the leader arm is moved to the configuration shown in Figure 1 and run:
 
 ```bash
 ros2 launch launch/factr_teleop_grav_comp_demo.py
 ```
 
-**Note:** You can fine-tune gravity compensation by adjusting the **`gain`** parameter under **`gravity_comp`** in the YAML file.  
-Increasing the gain applies stronger gravity compensation; decreasing it reduces the effect.
+**Note:** You can fine-tune gravity compensation by adjusting the **`gain`** parameter under **`gravity_comp`** in the YAML file. Increasing the gain applies stronger gravity compensation; decreasing it reduces the effect.

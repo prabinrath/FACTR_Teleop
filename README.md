@@ -14,12 +14,86 @@ _Carnegie Mellon University_
 <br>
 
 ## Catalog
-- [Environment](#environment)
+- [Installation](#installation)
 - [Data Collection](#data-collection)
 - [Policy Rollout](#policy-rollout)
 - [Citation](#citation)
   
-## Environment
+<!-- ## Installation
+
+Our repository requires ROS2. If not already installed, follow [ROS2 Installation Instructions](https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html) to install ROS2.
+We provide the following ROS2 packages
+- factr_teleop
+- bc
+- cameras
+- python_utils
+
+These packages are located at 
+<repo_root>/src
+
+These packages must exist inside of a ROS2 workspace. If you do not have an existing ROS2 Workspace then create a [workspace](https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html).
+
+Copy the four provided packages into your workspace and build the workspace. See [ROS2 Tutorial](https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html) for further help and then rebuild your workspace using colcon.
+
+Then install the following python packages:
+pip install zmq
+python -m pip install pin
+
+Then cd into <repo_root>/src/factr_teleop/factr_teleop/dynamixel, run
+pip install -e python -->
+
+
+## Installation
+
+This repository requires **ROS 2**.
+If you have nott installed ROS 2 yet, follow the official [ROS 2 installation guide](https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html).
+
+### Provided ROS 2 Packages
+
+The following ROS 2 packages are included in this repository:
+
+- `factr_teleop`
+- `bc`
+- `cameras`
+- `python_utils`
+
+These packages are located in:
+
+```
+<repo_root>/src
+```
+
+### ROS 2 Workspace Setup
+
+These packages must reside within a **ROS 2 workspace**. If you do not already have one, create a workspace by following the [ROS 2 workspace tutorial](https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html).
+
+Then:
+
+1. Copy the four provided packages into your workspace's `src/` directory.
+2. Build the workspace:
+   ```bash
+   colcon build --symlink-install
+   ```
+
+> For more guidance, refer to the [ROS 2 Tutorial](https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html).
+
+### Additional Python Dependencies
+
+Install the following Python packages:
+
+```bash
+pip install zmq
+python -m pip install pin
+```
+
+Finally, navigate to the Dynamixel submodule and install it via:
+
+```bash
+cd <repo_root>/src/factr_teleop/factr_teleop/dynamixel
+pip install -e python
+```
+
+
 
 ## Data Collection
 We provide instructions and sample data collection scripts in ROS2. You might need your custom nodes for robots and sensors to run the system. In our case, the collected data is saved in following format:
