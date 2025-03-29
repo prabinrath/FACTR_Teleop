@@ -1,15 +1,32 @@
-import numpy as np
-import time
-import pinocchio as pin
+# ---------------------------------------------------------------------------
+# FACTR: Force-Attending Curriculum Training for Contact-Rich Policy Learning
+# https://arxiv.org/abs/2502.17432
+# Copyright (c) 2025 Jason Jingzhou Liu and Yulong Li
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ---------------------------------------------------------------------------
+
 import os
-import subprocess
+import time
 import yaml
+import subprocess
+import numpy as np
+import pinocchio as pin
 from abc import ABC, abstractmethod
 
 from rclpy.node import Node
-
-from factr_teleop.dynamixel.driver import DynamixelDriver
 from python_utils.utils import get_workspace_root
+from factr_teleop.dynamixel.driver import DynamixelDriver
 
 
 def find_ttyusb(port_name):
@@ -29,6 +46,18 @@ def find_ttyusb(port_name):
 
 
 class FACTRTeleopFranka(Node, ABC):
+    """
+    Base class for implementing the FACTR low-cost force-feedback teleoperation system 
+    for a Franka follower arm.
+
+    This class implements the control loop for the leader teleoperation arm, including
+    features such as gravity compensation, null-space regulation, friction compensation,
+    and force-feedback.
+
+    Note that this class should be used as a parent class, where the defined abstract 
+    methods must be implemented by subclasses for handling communication between the 
+    leader and follower arms, as well as force-feedback for the leader gripper.
+    """
     def __init__(self):
         super().__init__('factr_teleop_franka')
 
@@ -73,6 +102,7 @@ class FACTRTeleopFranka(Node, ABC):
         self.enable_torque_feedback = self.config["controller"]["torque_feedback"]["enable"]
         self.torque_feedback_gain = self.config["controller"]["torque_feedback"]["gain"]
         self.torque_feedback_motor_scalar = self.config["controller"]["torque_feedback"]["motor_scalar"]
+        self.torque_feedback_damping = self.config["controller"]["torque_feedback"]["damping"]
         # gripper feedback
         self.enable_gripper_feedback = self.config["controller"]["gripper_feedback"]["enable"]
         
@@ -81,7 +111,7 @@ class FACTRTeleopFranka(Node, ABC):
 
         # calibrate the leader arm joints before starting
         self.calibration_joint_pos = np.array(self.config["initialization"]["calibration_joint_pos"])
-        self._get_offsets()
+        self._get_dynamixel_offsets()
         # ensure the leader and the follower arms have the same joint positions before starting
         self.initial_match_joint_pos = np.array(self.config["initialization"]["initial_match_joint_pos"])
         self._match_start_pos()
@@ -90,6 +120,9 @@ class FACTRTeleopFranka(Node, ABC):
 
 
     def _prepare_dynamixel(self):
+        """
+        Instantiates driver for interfacing with Dynamixel servos.
+        """
         self.joint_signs = np.array(self.config["dynamixel"]["joint_signs"], dtype=float)
         self.dynamixel_port = self.config["dynamixel"]["dynamixel_port"]
 
@@ -112,22 +145,26 @@ class FACTRTeleopFranka(Node, ABC):
             "XC330_T288_T", "XM430_W210_T", "XC330_T288_T", "XM430_W210_T", 
             "XC330_T288_T", "XC330_T288_T", "XC330_T288_T", "XC330_T288_T",
         ]
-
         try:
             self.driver = DynamixelDriver(
-                self.config["dynamixel"]["joint_ids"], 
-                servo_types, self.dynamixel_port
+                self.config["dynamixel"]["joint_ids"], servo_types, self.dynamixel_port
             )
         except FileNotFoundError:
-            print(f"Port {self.dynamixel_port} not found. Please check the connection.")
+            self.get_logger().info(f"Port {self.dynamixel_port} not found. Please check the connection.")
             return
-    
+
         self.driver.set_torque_mode(False)
+        # set operating mode to current mode
         self.driver.set_operating_mode(0)
+        # enable torque
         self.driver.set_torque_mode(True)
 
 
     def _prepare_inverse_dynamics(self):
+        """
+        Creates a model of the leader arm given the its URDF for kinematic and dynamic
+        computations used in gravity compensation and null-space regulation calculations.
+        """
         workspace_root = get_workspace_root()
         urdf_model_path = os.path.join(
             workspace_root, 'src/factr_teleop/factr_teleop/urdf/factr_teleop_franka.urdf'
@@ -139,7 +176,15 @@ class FACTRTeleopFranka(Node, ABC):
         self.pin_data = self.pin_model.createData()
 
 
-    def _get_offsets(self, verbose=True):
+    def _get_dynamixel_offsets(self, verbose=True):
+        """
+        Calibrates the Dynamixel servos with respect to the Franka arm to ensure the joint
+        position readings of the leader arm correspond to those of the follower arm.
+
+        Before launching this program, the leader arm should be manually placed in a 
+        configuration roughly corresponding to the follower's calibration position 
+        described in self.calibration_joint_pos (within ±90 degrees per joint).
+        """
         # warm up
         for _ in range(10):
             self.driver.get_positions_and_velocities()
@@ -180,9 +225,15 @@ class FACTRTeleopFranka(Node, ABC):
     
 
     def _match_start_pos(self):
+        """
+        Waits until the leader arm is manually moved to roughly the same configuration as the 
+        follower arm before the follower arm starts mirroring the leader arm. 
+        """
         curr_pos, _, _, _ = self.get_leader_joint_states()
         while (np.linalg.norm(curr_pos - self.initial_match_joint_pos[0:self.num_arm_joints]) > 0.5):
-            current_joint_error = np.linalg.norm(curr_pos - self.initial_match_joint_pos[0:self.num_arm_joints])
+            current_joint_error = np.linalg.norm(
+                curr_pos - self.initial_match_joint_pos[0:self.num_arm_joints]
+            )
             self.get_logger().info(
                 f"FACTR TELEOP {self.name}: Please match starting joint pos. Current error: {current_joint_error}"
             )
@@ -192,6 +243,10 @@ class FACTRTeleopFranka(Node, ABC):
 
     
     def get_leader_joint_states(self):
+        """
+        Returns the current joint positions and velocities of the leader arm and gripper,
+        aligned with the joint conventions (range and direction) of the follower arm.
+        """
         self.gripper_pos_prev = self.gripper_pos
         joint_pos, joint_vel = self.driver.get_positions_and_velocities()
         joint_pos_arm = (
@@ -205,6 +260,17 @@ class FACTRTeleopFranka(Node, ABC):
     
 
     def set_leader_joint_pos(self, goal_joint_pos, goal_gripper_pos):
+        """
+        Moves the leader arm and gripper to a specified joint configuration using a PD control loop.
+        This method is useful for aligning the leader arm with a desired configuration, such as 
+        matching the follower arm's configuration. It interpolates the motion toward the target 
+        position and applies torque commands based on a PD controller.
+
+        **Note:** This function is not used by default in the main teleoperation loop. To ensure 
+        controller stability, please ensure the latency of Dynamixel servos is minimized such
+        that the control loop frequency is at least 200 Hz. Otherwise, the PD controller tuning 
+        is unstable for low control frequencies.
+        """
         interpolation_step_size = np.ones(7)*self.config["controller"]["interpolation_step_size"]
         kp = self.config["controller"]["joint_position_control"]["kp"]
         kd = self.config["controller"]["joint_position_control"]["kd"]
@@ -218,36 +284,65 @@ class FACTRTeleopFranka(Node, ABC):
             )
             torque = -kp*(curr_pos-next_joint_pos_target)-kd*(curr_vel)
             gripper_torque = -kp*(curr_gripper_pos-goal_gripper_pos)-kd*(curr_gripper_vel)
-            self.set_joint_torque(torque, gripper_torque)
+            self.set_leader_joint_torque(torque, gripper_torque)
             curr_pos, curr_vel, curr_gripper_pos, curr_gripper_vel = self.get_leader_joint_states()
     
 
     def shut_down(self):
-        self.set_joint_torque(np.zeros(self.num_arm_joints), 0.0)
+        """
+        Disables all torque on the leader arm and gripper during node shutdown.
+        """
+        self.set_leader_joint_torque(np.zeros(self.num_arm_joints), 0.0)
         self.driver.set_torque_mode(False)
         
         
-    def set_leader_joint_torque(self, torque, gripper_torque):
-        full_torque = np.append(torque, gripper_torque)
-        self.driver.set_torque(full_torque*self.joint_signs)
+    def set_leader_joint_torque(self, arm_torque, gripper_torque):
+        """
+        Applies torque to the leader arm and gripper.
+        """
+        arm_gripper_torque = np.append(arm_torque, gripper_torque)
+        self.driver.set_torque(arm_gripper_torque*self.joint_signs)
 
 
     def joint_limit_barrier(self, arm_joint_pos, arm_joint_vel, gripper_joint_pos, gripper_joint_vel):
-        exceed_max_mask = arm_joint_pos > self.arm_joint_limits_max
-        tau_l = (-self.joint_limit_kp * (arm_joint_pos - self.arm_joint_limits_max) - self.joint_limit_kd * arm_joint_vel) * exceed_max_mask
-        exceed_min_mask = arm_joint_pos < self.arm_joint_limits_min
-        tau_l += (-self.joint_limit_kp * (arm_joint_pos - self.arm_joint_limits_min) - self.joint_limit_kd * arm_joint_vel) * exceed_min_mask
+        """
+        Computes joint limit repulsive torque to prevent the leader arm and gripper from 
+        exceeding the physical joint limits of the follower arm.
 
+        This method implements a simplified control law compared to the one described in 
+        Section IX.B of the paper, while achieving the same protective effect. It applies 
+        repulsive torques proportional to the distance from the joint limits and the joint 
+        velocity when limits are approached or exceeded.
+        """
+        exceed_max_mask = arm_joint_pos > self.arm_joint_limits_max
+        tau_l = (-self.joint_limit_kp * (arm_joint_pos - self.arm_joint_limits_max) \
+            - self.joint_limit_kd * arm_joint_vel) * exceed_max_mask
+        exceed_min_mask = arm_joint_pos < self.arm_joint_limits_min
+        tau_l += (-self.joint_limit_kp * (arm_joint_pos - self.arm_joint_limits_min) \
+            - self.joint_limit_kd * arm_joint_vel) * exceed_min_mask
+        
         if gripper_joint_pos > self.gripper_limit_max:
-            tau_l_gripper = -self.joint_limit_kp * (gripper_joint_pos - self.gripper_limit_max) - self.joint_limit_kd * gripper_joint_vel
+            tau_l_gripper = -self.joint_limit_kp * (gripper_joint_pos - self.gripper_limit_max) \
+                - self.joint_limit_kd * gripper_joint_vel
         elif gripper_joint_pos < self.gripper_limit_min:
-            tau_l_gripper = -self.joint_limit_kp * (gripper_joint_pos - self.gripper_limit_min) - self.joint_limit_kd * gripper_joint_vel
+            tau_l_gripper = -self.joint_limit_kp * (gripper_joint_pos - self.gripper_limit_min) \
+                - self.joint_limit_kd * gripper_joint_vel
         else:
             tau_l_gripper = 0.0
         return tau_l, tau_l_gripper
 
 
     def gravity_compensation(self, arm_joint_pos, arm_joint_vel):
+        """
+        Computes joint torque for gravity compensation using inverse dynamics.
+        This method uses the Recursive Newton-Euler Algorithm (RNEA), provided by the 
+        Pinocchio library, to calculate the torques required to counteract gravity 
+        at the current joint states. The result is scaled by a modifier to tune the 
+        compensation strength.
+
+        This implementation corresponds to the gravity compensation strategy 
+        described in Section III.C of the paper.
+        """
         self.tau_g = pin.rnea(
             self.pin_model, self.pin_data, 
             arm_joint_pos, arm_joint_vel, np.zeros_like(arm_joint_vel)
@@ -257,6 +352,14 @@ class FACTRTeleopFranka(Node, ABC):
 
 
     def friction_compensation(self, arm_joint_vel):
+        """
+        Compute joint torques to compensate for static friction during teleoperation.
+
+        This method implements static friction compensation as described in Equation 7,
+        Section IX.A of the paper. It omits kinetic friction compensation, which was 
+        necessary in earlier hardware versions to achieve smooth teleoperation, but has 
+        since become unnecessary due to hardware improvements, such as weight reduction. 
+        """
         tau_ss = np.zeros(self.num_arm_joints)
         for i in range(self.num_arm_joints):
             if abs(arm_joint_vel[i]) < self.stiction_comp_enable_speed:
@@ -269,16 +372,35 @@ class FACTRTeleopFranka(Node, ABC):
     
 
     def null_space_regulation(self, arm_joint_pos, arm_joint_vel):
-        J = pin.computeJointJacobian(self.pin_model, self.pin_data, arm_joint_pos, self.num_arm_joints)
+        """
+        Computes joint torques to perform null-space regulation for redundancy resolution 
+        of the leader arm.
+
+        This method enables the specification of a desired null-space joint configuration 
+        via `self.null_space_joint_target`. It implements the control strategy described 
+        in Equation 3 of Section III.B in the paper, projecting a PD control law into 
+        the null space of the task Jacobian to achieve secondary objectives without 
+        affecting the primary task.
+        """
+        J = pin.computeJointJacobian(
+            self.pin_model, self.pin_data, arm_joint_pos, self.num_arm_joints
+        )
         J_dagger = np.linalg.pinv(J)
         null_space_projector = np.eye(self.num_arm_joints) - J_dagger @ J
         q_error = arm_joint_pos - self.null_space_joint_target[0:self.num_arm_joints]
-        tau_n = null_space_projector @ (-self.null_space_kp*q_error -self.null_space_kd*arm_joint_vel)
+        tau_n = null_space_projector @ (-self.null_space_kp*q_error-self.null_space_kd*arm_joint_vel)
         return tau_n
     
 
-    def torque_feedback(self, external_torque):
+    def torque_feedback(self, external_torque, arm_joint_vel):
+        """
+        Computes joint torque for the leader arm to achieve force-feedback based on
+        the external joint torque from the follower arm.
+
+        This method implements Equation 1 in Section III.A of the paper.
+        """
         tau_ff = -1.0*self.torque_feedback_gain/self.torque_feedback_motor_scalar * external_torque
+        tau_ff -= self.torque_feedback_damping*arm_joint_vel
         return tau_ff
 
 
@@ -298,7 +420,7 @@ class FACTRTeleopFranka(Node, ABC):
         
         if self.enable_torque_feedback:
             external_joint_torque = self.get_leader_arm_external_joint_torque()
-            torque_arm += self.torque_feedback(external_joint_torque)
+            torque_arm += self.torque_feedback(external_joint_torque, leader_arm_vel)
         
         if self.enable_gripper_feedback:
             gripper_feedback = self.get_leader_gripper_feedback()

@@ -1,4 +1,25 @@
-import time
+# ---------------------------------------------------------------------------
+# FACTR: Force-Attending Curriculum Training for Contact-Rich Policy Learning
+# https://arxiv.org/abs/2502.17432
+# Copyright (c) 2025 Jason Jingzhou Liu and Yulong Li
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ---------------------------------------------------------------------------
+# Based on: 
+# https://github.com/wuphilipp/gello_software/blob/main/gello/dynamixel/driver.py
+# ---------------------------------------------------------------------------
+
+
 from threading import Event, Lock, Thread
 from typing import Protocol, Sequence
 
@@ -34,7 +55,6 @@ TORQUE_TO_CURRENT_MAPPING = {
     "XC330_T288_T": 1158.73,
     "XM430_W210_T": 1000/2.69,
 }
-
 
 
 class DynamixelDriverProtocol(Protocol):
@@ -145,26 +165,26 @@ class DynamixelDriver(DynamixelDriverProtocol):
         _positions = np.zeros(len(self._ids), dtype=int)
         _velocities = np.zeros(len(self._ids), dtype=int)
         
-        # Perform the group sync read transaction
+        # perform the group sync read transaction
         dxl_comm_result = self._groupSyncRead.txRxPacket()
         if dxl_comm_result != COMM_SUCCESS:
             raise RuntimeError(f"Warning, communication failed: {dxl_comm_result}")
         
         for i, dxl_id in enumerate(self._ids):
-            # Read velocity data
+            # read velocity data
             if self._groupSyncRead.isAvailable(dxl_id, ADDR_PRESENT_VELOCITY, LEN_PRESENT_VELOCITY):
                 velocity = self._groupSyncRead.getData(dxl_id, ADDR_PRESENT_VELOCITY, LEN_PRESENT_VELOCITY)
-                # Apply sign correction
+                # apply sign correction
                 if velocity > 0x7FFFFFFF:
                     velocity -= 0x100000000
                 _velocities[i] = velocity
             else:
                 raise RuntimeError(f"Failed to get velocity for Dynamixel with ID {dxl_id}")
             
-            # Read position data
+            # read position data
             if self._groupSyncRead.isAvailable(dxl_id, ADDR_PRESENT_POSITION, LEN_PRESENT_POSITION):
                 position = self._groupSyncRead.getData(dxl_id, ADDR_PRESENT_POSITION, LEN_PRESENT_POSITION)
-                # Apply sign correction
+                # apply sign correction
                 if position > 0x7FFFFFFF:
                     position -= 0x100000000
                 _positions[i] = position
@@ -174,7 +194,7 @@ class DynamixelDriver(DynamixelDriverProtocol):
         self._positions = _positions
         self._velocities = _velocities
         
-        # Return positions and velocities in meaningful units
+        # return positions and velocities in meaningful units
         positions_in_radians = _positions / 2048.0 * np.pi
         velocities_in_units = _velocities * 0.229 * 2 * np.pi / 60
         
@@ -186,11 +206,8 @@ class DynamixelDriver(DynamixelDriverProtocol):
             raise ValueError("The length of currents must match the number of servos")
         if not self._torque_enabled:
             raise RuntimeError("Torque must be enabled to set currents")
-        
 
         currents = np.clip(currents, -900, 900)
-        # currents = np.clip(currents, -800, 800)
-
         for dxl_id, current in zip(self._ids, currents):
             current_value = int(current)
 
@@ -212,6 +229,7 @@ class DynamixelDriver(DynamixelDriverProtocol):
      
 
 def main():
+    # script for testing purposes
     ids = [1, 2, 3, 4, 5, 6, 7]
     port = "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FT8ISV6J-if00-port0"
 

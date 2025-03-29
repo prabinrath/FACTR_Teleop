@@ -17,6 +17,7 @@ controller:
   torque_feedback:
     enable: True
     gain: 3.0
+    damping: 0.0
     motor_scalar: 94.5652173913
   gravity_comp:
     enable: True
