@@ -19,10 +19,6 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
-from launch import LaunchDescription
-from launch_ros.actions import Node
-
-
 def generate_launch_description():
     factr_teleop_franka_right = Node(
         package='factr_teleop',

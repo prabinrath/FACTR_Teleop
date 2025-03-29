@@ -145,7 +145,7 @@ class FACTRTeleopFranka(Node, ABC):
                 f"Please ensure the latency timer of {ttyUSBx} is 1. Run: \n \
                 echo 1 | sudo tee /sys/bus/usb-serial/devices/{ttyUSBx}/latency_timer"
             )
-        
+
         servo_types = [
             "XC330_T288_T", "XM430_W210_T", "XC330_T288_T", "XM430_W210_T", 
             "XC330_T288_T", "XC330_T288_T", "XC330_T288_T", "XC330_T288_T",
@@ -157,13 +157,11 @@ class FACTRTeleopFranka(Node, ABC):
         except FileNotFoundError:
             self.get_logger().info(f"Port {self.dynamixel_port} not found. Please check the connection.")
             return
-
         self.driver.set_torque_mode(False)
         # set operating mode to current mode
         self.driver.set_operating_mode(0)
         # enable torque
         self.driver.set_torque_mode(True)
-
 
     def _prepare_inverse_dynamics(self):
         """
@@ -179,7 +177,6 @@ class FACTRTeleopFranka(Node, ABC):
             package_dirs=os.path.join(workspace_root, "src/factr_teleop/factr_teleop/urdf")
         )
         self.pin_data = self.pin_model.createData()
-
 
     def _get_dynamixel_offsets(self, verbose=True):
         """
@@ -228,7 +225,6 @@ class FACTRTeleopFranka(Node, ABC):
                 + " ]",
             )
     
-
     def _match_start_pos(self):
         """
         Waits until the leader arm is manually moved to roughly the same configuration as the 
@@ -246,7 +242,14 @@ class FACTRTeleopFranka(Node, ABC):
             time.sleep(0.5)
         self.get_logger().info(f"FACTR TELEOP {self.name}: Initial joint position matched.")
 
-    
+
+    def shut_down(self):
+        """
+        Disables all torque on the leader arm and gripper during node shutdown.
+        """
+        self.set_leader_joint_torque(np.zeros(self.num_arm_joints), 0.0)
+        self.driver.set_torque_mode(False)
+
     def get_leader_joint_states(self):
         """
         Returns the current joint positions and velocities of the leader arm and gripper,
@@ -263,7 +266,6 @@ class FACTRTeleopFranka(Node, ABC):
         gripper_vel = (self.gripper_pos - self.gripper_pos_prev) / self.dt
         return joint_pos_arm, joint_vel_arm, self.gripper_pos, gripper_vel
     
-
     def set_leader_joint_pos(self, goal_joint_pos, goal_gripper_pos):
         """
         Moves the leader arm and gripper to a specified joint configuration using a PD control loop.
@@ -292,15 +294,6 @@ class FACTRTeleopFranka(Node, ABC):
             self.set_leader_joint_torque(torque, gripper_torque)
             curr_pos, curr_vel, curr_gripper_pos, curr_gripper_vel = self.get_leader_joint_states()
     
-
-    def shut_down(self):
-        """
-        Disables all torque on the leader arm and gripper during node shutdown.
-        """
-        self.set_leader_joint_torque(np.zeros(self.num_arm_joints), 0.0)
-        self.driver.set_torque_mode(False)
-        
-        
     def set_leader_joint_torque(self, arm_torque, gripper_torque):
         """
         Applies torque to the leader arm and gripper.
@@ -336,7 +329,6 @@ class FACTRTeleopFranka(Node, ABC):
             tau_l_gripper = 0.0
         return tau_l, tau_l_gripper
 
-
     def gravity_compensation(self, arm_joint_pos, arm_joint_vel):
         """
         Computes joint torque for gravity compensation using inverse dynamics.
@@ -354,7 +346,6 @@ class FACTRTeleopFranka(Node, ABC):
         )
         self.tau_g *= self.gravity_comp_modifier 
         return self.tau_g
-
 
     def friction_compensation(self, arm_joint_vel):
         """
@@ -375,7 +366,6 @@ class FACTRTeleopFranka(Node, ABC):
                 self.stiction_dither_flag[i] = ~self.stiction_dither_flag[i]
         return tau_ss
     
-
     def null_space_regulation(self, arm_joint_pos, arm_joint_vel):
         """
         Computes joint torques to perform null-space regulation for redundancy resolution 
@@ -396,7 +386,6 @@ class FACTRTeleopFranka(Node, ABC):
         tau_n = null_space_projector @ (-self.null_space_kp*q_error-self.null_space_kd*arm_joint_vel)
         return tau_n
     
-
     def torque_feedback(self, external_torque, arm_joint_vel):
         """
         Computes joint torque for the leader arm to achieve force-feedback based on
@@ -407,7 +396,6 @@ class FACTRTeleopFranka(Node, ABC):
         tau_ff = -1.0*self.torque_feedback_gain/self.torque_feedback_motor_scalar * external_torque
         tau_ff -= self.torque_feedback_damping*arm_joint_vel
         return tau_ff
-
 
     def control_loop_callback(self):
         """

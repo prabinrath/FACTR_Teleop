@@ -19,10 +19,6 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
-from launch import LaunchDescription
-from launch_ros.actions import Node
-
-
 def generate_launch_description():
     gripper_node = Node(
         package='gripper',
