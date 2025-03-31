@@ -237,7 +237,7 @@ class FACTRTeleop(Node, ABC):
         follower arm before the follower arm starts mirroring the leader arm. 
         """
         curr_pos, _, _, _ = self.get_leader_joint_states()
-        while (np.linalg.norm(curr_pos - self.initial_match_joint_pos[0:self.num_arm_joints]) > 0.5):
+        while (np.linalg.norm(curr_pos - self.initial_match_joint_pos[0:self.num_arm_joints]) > 0.6):
             current_joint_error = np.linalg.norm(
                 curr_pos - self.initial_match_joint_pos[0:self.num_arm_joints]
             )
