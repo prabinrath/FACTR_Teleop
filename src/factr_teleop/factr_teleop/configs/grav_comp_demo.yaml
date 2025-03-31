@@ -12,6 +12,7 @@ dynamixel:
   joint_signs: [1, 1, 1, -1, 1, -1, 1, -1]
 
 arm_teleop:
+  # URDF used for creating leader arm dynamics model to compute gravity compensation
   leader_urdf: "factr_teleop_franka.urdf"
   num_arm_joints: 7
   arm_joint_limits_max: [2.8973, 1.7628, 2.8973, -0.8698, 2.8973, 3.7525, 2.8973]

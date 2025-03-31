@@ -20,19 +20,6 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 
 def generate_launch_description():
-    gripper_node = Node(
-        package='gripper',
-        executable='gripper',
-        name='gripper_right',
-        output='screen',
-        emulate_tty=True,
-        parameters=[
-            {"connect_to_real": True},
-            {"torque_feedback": True},
-            {"is_left": False},
-        ]
-    )
-    
     zed_node = Node(
         package='cameras',
         executable='zed',
@@ -51,7 +38,6 @@ def generate_launch_description():
         name='franka_bridge_node',          
         output='screen',                
         parameters=[
-            {"connect_to_real": True},
             {"torque_feedback": True},
         ]
     )
@@ -81,7 +67,6 @@ def generate_launch_description():
     )
     
     return LaunchDescription([
-        gripper_node,
         franka_bridge_node,
         zed_node,
         policy_rollout_node,

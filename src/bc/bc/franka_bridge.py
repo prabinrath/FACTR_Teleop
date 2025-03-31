@@ -25,8 +25,8 @@ from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from bc.utils import create_joint_state_msg
 from python_utils.zmq_messenger import ZMQPublisher, ZMQSubscriber
-from python_utils.global_configs import franka_left_real_zmq_addresses, franka_left_sim_zmq_addresses
-from python_utils.global_configs import franka_right_real_zmq_addresses, franka_right_sim_zmq_addresses
+from python_utils.global_configs import franka_left_real_zmq_addresses
+from python_utils.global_configs import franka_right_real_zmq_addresses
 
 
 class FrankaBridge(Node):  
@@ -36,16 +36,11 @@ class FrankaBridge(Node):
     """
     def __init__(self):
         super().__init__('franka_bridge')
-        self.connect_to_real = self.declare_parameter('connect_to_real', True).get_parameter_value().bool_value
         self.torque_feedback = self.declare_parameter('torque_feedback', True).get_parameter_value().bool_value
 
-        if self.connect_to_real:
-            left_zmq_addresses = franka_left_real_zmq_addresses
-            right_zmq_addresses = franka_right_real_zmq_addresses
-        else:
-            left_zmq_addresses = franka_left_sim_zmq_addresses
-            right_zmq_addresses = franka_right_sim_zmq_addresses
-
+        left_zmq_addresses = franka_left_real_zmq_addresses
+        right_zmq_addresses = franka_right_real_zmq_addresses
+  
         self.left_franka_cmd_pub = ZMQPublisher(left_zmq_addresses["joint_pos_cmd_pub"])
         self.left_franka_cmd_sub = self.create_subscription(JointState, f'/factr_teleop/left/cmd_franka_pos', self.left_franka_cmd_callback, 10)
         

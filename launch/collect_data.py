@@ -30,9 +30,7 @@ def generate_launch_description():
             {
                 "state_topics": [
                     "/factr_teleop/right/cmd_franka_pos",
-                    "/factr_teleop/right/cmd_gripper_pos",
                     "/franka/right/obs_franka_torque",
-                    "/gripper/right/obs_gripper_pos",
                 ]
             },
             {
@@ -54,19 +52,6 @@ def generate_launch_description():
             {"config_file": "franka_right.yaml"}
         ]
     )
-
-    gripper_right_node = Node(
-        package='gripper',
-        executable='gripper',
-        name='gripper_right',
-        output='screen',
-        emulate_tty=True,
-        parameters=[
-            {"connect_to_real": True},
-            {"torque_feedback": True},
-            {"is_left": False},
-        ]
-    )
     
     zed_node = Node(
         package='cameras',
@@ -82,7 +67,6 @@ def generate_launch_description():
     
     return LaunchDescription([
         factr_teleop_franka_right,
-        gripper_right_node,
         data_record_node,
         zed_node
     ])
