@@ -431,7 +431,7 @@ class FACTRTeleop(Node, ABC):
         
         if self.enable_gripper_feedback:
             gripper_feedback = self.get_leader_gripper_feedback()
-            torque_gripper += self.gripper_feedback(gripper_feedback)
+            torque_gripper += self.gripper_feedback(leader_gripper_pos, leader_gripper_vel, gripper_feedback)
 
         self.set_leader_joint_torque(torque_arm, torque_gripper)
         self.update_communication(leader_arm_pos, leader_gripper_pos)
@@ -493,13 +493,17 @@ class FACTRTeleop(Node, ABC):
 
 
     @abstractmethod
-    def gripper_feedback(self, gripper_feedback):
+    def gripper_feedback(self, leader_gripper_pos, leader_gripper_vel, gripper_feedback):
         """
         Processes feedback data from the follower gripper. This method is intended to compute 
         force-feedback for the leader gripper. This method is called at every iteration of the 
         control loop if self.enable_gripper_feedback is set to True.
 
         Args:
+            leader_gripper_pos (float): Leader gripper position. Can be used to provide force-
+            feedback for the gripper.
+            leader_gripper_vel (float): Leader gripper velocity. Can be used to provide force-
+            feedback for the gripper.
             gripper_feedback (Any): Feedback data from the gripper. The format can vary depending 
             on the implementation, such as a NumPy array, scalar, or custom object.
         

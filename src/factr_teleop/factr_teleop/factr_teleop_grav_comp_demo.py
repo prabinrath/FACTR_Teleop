@@ -39,7 +39,7 @@ class FACTRTeleopGravComp(FACTRTeleop):
     def get_leader_gripper_feedback(self):
         pass
     
-    def gripper_feedback(self, gripper_feedback):
+    def gripper_feedback(self, leader_gripper_pos, leader_gripper_vel, gripper_feedback):
         pass
     
     def get_leader_arm_external_joint_torque(self):

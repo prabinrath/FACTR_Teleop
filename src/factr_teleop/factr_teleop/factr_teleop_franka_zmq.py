@@ -96,7 +96,7 @@ class FACTRTeleopFrankaZMQ(FACTRTeleop):
     def get_leader_gripper_feedback(self):
         return self.gripper_external_torque
     
-    def gripper_feedback(self, gripper_feedback):
+    def gripper_feedback(self, leader_gripper_pos, leader_gripper_vel, gripper_feedback):
         torque_gripper = -1.0*gripper_feedback / self.gripper_feedback_gain
         return torque_gripper
     
