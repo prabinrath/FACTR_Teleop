@@ -165,7 +165,7 @@ class PolicyRollout(Rollout):
         Get action from policy.
         """
         with torch.no_grad():
-            pred_action = self.policy.eval()(img_obs, state_obs)    
+            pred_action = self.policy.eval().get_actions(img_obs, state_obs)    
             pred_action = pred_action.detach().cpu().numpy()[0]
         self.act_history.append(pred_action)
         cmd_action = self.action_chunk_ensemble()

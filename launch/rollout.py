@@ -63,7 +63,7 @@ def generate_launch_description():
         output='screen',                
         parameters=[
             {"save_data": True},
-            {"data_dir":"checkpoints/test/rollout"}
+            {"data_dir":"../factr/checkpoints/test/rollout"}
 
         ]
     )

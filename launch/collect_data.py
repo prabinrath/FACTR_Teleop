@@ -30,7 +30,7 @@ def generate_launch_description():
             {
                 "state_topics": [
                     "/factr_teleop/right/cmd_franka_pos",
-                    "/gripper/right/cmd_gripper_pos",
+                    "/factr_teleop/right/cmd_gripper_pos",
                     "/franka/right/obs_franka_torque",
                     "/gripper/right/obs_gripper_pos",
                 ]
