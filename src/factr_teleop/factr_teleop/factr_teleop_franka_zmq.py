@@ -23,7 +23,7 @@ import numpy as np
 import rclpy
 from sensor_msgs.msg import JointState
 
-from factr_teleop.factr_teleop_franka import FACTRTeleopFranka
+from factr_teleop.factr_teleop import FACTRTeleop
 from python_utils.zmq_messenger import ZMQPublisher, ZMQSubscriber
 from python_utils.global_configs import franka_left_real_zmq_addresses, franka_right_real_zmq_addresses
 
@@ -34,7 +34,7 @@ def create_array_msg(data):
     return msg
 
 
-class FACTRTeleopFrankaZMQ(FACTRTeleopFranka):
+class FACTRTeleopFrankaZMQ(FACTRTeleop):
     """
     This class implements the required communication methods required by FACTRTeleopFranka using
     ZMQ. Communication between the leader teleop arm and the follower Franka arm is established
@@ -75,7 +75,7 @@ class FACTRTeleopFrankaZMQ(FACTRTeleopFranka):
             # ZMQ subscriber used to get the extenral joint torque from the Franka follower arm
             self.franka_torque_sub = ZMQSubscriber(zmq_addresses["joint_torque_sub"])
             while self.franka_torque_sub.message is None:
-                print(f"Has not received Franka {self.name}'s external joint torques")
+                self.get_logger().info(f"Has not received Franka {self.name}'s external joint torques")
                 time.sleep(0.1)
             # ROS publisher for re-publishing Franka's external joint torque
             self.obs_franka_torque_pub = self.create_publisher(JointState, f'/franka/{self.name}/obs_franka_torque', 10)

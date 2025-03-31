@@ -40,8 +40,8 @@ class Gripper(Node):
 
         # checks of the latency timer on ttyUSB of the corresponding port is 1
         # if it is not 1, the control loop cannot run at 200 Hz, which will cause
-        # extremely undesirable behaviour to the GELLO. If the latency timer is not
-        # 1, one can set it to 1 as follows:
+        # extremely undesirable behaviour to the leader arm. If the latency timer is 
+        # not 1, one can set it to 1 as follows:
         # echo 1 | sudo tee /sys/bus/usb-serial/devices/ttyUSB{NUM}/latency_timer
         ttyUSBx = self._find_ttyusb(self.dynamixel_port)
         command = f"cat /sys/bus/usb-serial/devices/{ttyUSBx}/latency_timer"        
@@ -108,7 +108,7 @@ class Gripper(Node):
             JointState, f'/gripper/{self.gripper_name}/obs_gripper_pos', 1
         )
         self.gripper_cmd_pos_sub = self.create_subscription(
-            JointState, f'/gello/{self.gripper_name}/cmd_gripper_pos', 
+            JointState, f'/factr_teleop/{self.gripper_name}/cmd_gripper_pos', 
             self._gripper_cmd_pos_callback, 
             1,
         )

@@ -96,17 +96,17 @@ Since changing the latency timer requires `sudo` permissions, **you must run the
 
 # Preparing to Launch FACTR Teleop
 
-## Implementing a Subclass of `FACTRTeleopFranka`
+## Implementing a Subclass of `FACTRTeleop`
 
-Before running the FACTR teleoperation scripts, you must create a **subclass** of the `FACTRTeleopFranka` base class, located at:
+Before running the FACTR teleoperation scripts, you must create a **subclass** of the `FACTRTeleop` base class, located at:
 
 ```
-<repo_root>/src/factr_teleop/factr_teleop/factr_teleop_franka.py
+<repo_root>/src/factr_teleop/factr_teleop/factr_teleop.py
 ```
 
-### What is `FACTRTeleopFranka`?
+### What is `FACTRTeleop`?
 
-`FACTRTeleopFranka` is the core base class for implementing the FACTR low-cost, force-feedback teleoperation system for a **Franka Emika Panda** robot as the follower arm. It includes the full control loop for the **leader arm**, and provides support for:
+`FACTRTeleop` is the core base class for implementing the FACTR low-cost, force-feedback teleoperation system for a **follower arm**. It includes the full control loop for the **leader arm**, and provides support for:
 
 - Gravity compensation  
 - Null-space regulation  
@@ -147,7 +147,7 @@ Here's the provided example in `setup.py`:
 entry_points={
     'console_scripts': [
         'factr_teleop_franka = factr_teleop.factr_teleop_franka_zmq:main',
-        'factr_teleop_franka_grav_comp_demo = factr_teleop.factr_teleop_franka_grav_comp_demo:main',
+        'factr_teleop_grav_comp_demo = factr_teleop.factr_teleop_grav_comp_demo:main',
     ],
 },
 ```
@@ -252,12 +252,12 @@ This demo showcases the **gravity compensation** and **null-space regulation** f
 
 - The subclass used for this example is `FACTRTeleopFrankaGravComp`, located at:
   ```
-  <repo_root>/src/factr_teleop/factr_teleop/factr_teleop_franka_grav_comp_demo.py
+  <repo_root>/src/factr_teleop/factr_teleop/factr_teleop_grav_comp_demo.py
   ```
 
 - The corresponding YAML configuration file is:
   ```
-  <repo_root>/src/factr_teleop/factr_teleop/configs/franka_grav_comp_demo.yaml
+  <repo_root>/src/factr_teleop/factr_teleop/configs/grav_comp_demo.yaml
   ```
 
 To launch the demo, ensure the leader arm is moved to the configuration shown in Figure 1 and run:

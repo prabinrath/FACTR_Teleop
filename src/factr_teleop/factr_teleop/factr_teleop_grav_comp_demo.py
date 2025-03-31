@@ -21,9 +21,9 @@ import time
 import numpy as np
 
 import rclpy
-from factr_teleop.factr_teleop_franka import FACTRTeleopFranka
+from factr_teleop.factr_teleop import FACTRTeleop
 
-class FACTRTeleopFrankaGravComp(FACTRTeleopFranka):
+class FACTRTeleopGravComp(FACTRTeleop):
     """
     This class demonstrates the gravity compensation and null-space regulation function of the 
     FACTR teleop leader arm. Communication between the leader arm and the follower Franka arm
@@ -51,14 +51,14 @@ class FACTRTeleopFrankaGravComp(FACTRTeleopFranka):
 
 def main(args=None):
     rclpy.init(args=args)
-    factr_teleop_franka_zmq = FACTRTeleopFrankaGravComp()
+    factr_teleop_grav_comp = FACTRTeleopGravComp()
 
     try:
         while rclpy.ok():
-            rclpy.spin(factr_teleop_franka_zmq)
+            rclpy.spin(factr_teleop_grav_comp)
     except KeyboardInterrupt:
-        factr_teleop_franka_zmq.get_logger().info("Keyboard interrupt received. Shutting down...")
-        factr_teleop_franka_zmq.shut_down()
+        factr_teleop_grav_comp.get_logger().info("Keyboard interrupt received. Shutting down...")
+        factr_teleop_grav_comp.shut_down()
     finally:
         rclpy.shutdown()
 

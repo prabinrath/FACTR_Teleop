@@ -50,10 +50,10 @@ def find_ttyusb(port_name):
         raise Exception(f"Unable to resolve the symbolic link for '{port_name}'. {e}")
 
 
-class FACTRTeleopFranka(Node, ABC):
+class FACTRTeleop(Node, ABC):
     """
     Base class for implementing the FACTR low-cost force-feedback teleoperation system 
-    for a Franka follower arm.
+    for a follower arm.
 
     This class implements the control loop for the leader teleoperation arm, including
     features such as gravity compensation, null-space regulation, friction compensation,
@@ -64,7 +64,7 @@ class FACTRTeleopFranka(Node, ABC):
     leader and follower arms, as well as force-feedback for the leader gripper.
     """
     def __init__(self):
-        super().__init__('factr_teleop_franka')
+        super().__init__('factr_teleop')
 
         config_file_name = self.declare_parameter('config_file', '').get_parameter_value().string_value
         config_path = os.path.join(get_workspace_root(), f"src/factr_teleop/factr_teleop/configs/{config_file_name}")
@@ -72,16 +72,23 @@ class FACTRTeleopFranka(Node, ABC):
             self.config = yaml.safe_load(config_file)
         
         self.name = self.config["name"]
-        self.dt = 1/500
-        self.num_motors = 8
-        self.num_arm_joints = 7
-
+        self.dt = 1 / self.config["controller"]["frequency"]
+        
         self._prepare_dynamixel()
         self._prepare_inverse_dynamics()
 
         # leader arm parameters
-        self.arm_joint_limits_max = np.array([2.8973, 1.7628, 2.8973, -0.0698-0.8, 2.8973, 3.7525, 2.8973]) - 0.1
-        self.arm_joint_limits_min = np.array([-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973]) + 0.1
+        self.num_arm_joints = self.config["arm_teleop"]["num_arm_joints"]
+        self.safety_margin = self.config["arm_teleop"]["arm_joint_limits_safety_margin"]
+        self.arm_joint_limits_max = np.array(self.config["arm_teleop"]["arm_joint_limits_max"]) - self.safety_margin
+        self.arm_joint_limits_min = np.array(self.config["arm_teleop"]["arm_joint_limits_min"]) + self.safety_margin
+        self.calibration_joint_pos = np.array(self.config["arm_teleop"]["initialization"]["calibration_joint_pos"])
+        self.initial_match_joint_pos = np.array(self.config["arm_teleop"]["initialization"]["initial_match_joint_pos"])
+        assert self.num_arm_joints == len(self.arm_joint_limits_max) == len(self.arm_joint_limits_min), \
+            "num_arm_joints and the length of arm joint limits must be the same"
+        assert self.num_arm_joints == len(self.calibration_joint_pos) == len(self.initial_match_joint_pos), \
+            "num_arm_joints and the length of calibration_joint_pos and initial_match_joint_pos must be the same"
+        
         # leader gripper parameters
         self.gripper_limit_min = 0.0
         self.gripper_limit_max = self.config["gripper_teleop"]["actuation_range"]
@@ -115,10 +122,8 @@ class FACTRTeleopFranka(Node, ABC):
         self.set_up_communication()
 
         # calibrate the leader arm joints before starting
-        self.calibration_joint_pos = np.array(self.config["initialization"]["calibration_joint_pos"])
         self._get_dynamixel_offsets()
         # ensure the leader and the follower arms have the same joint positions before starting
-        self.initial_match_joint_pos = np.array(self.config["initialization"]["initial_match_joint_pos"])
         self._match_start_pos()
         # start the control loop
         self.timer = self.create_timer(self.dt, self.control_loop_callback)
@@ -128,13 +133,17 @@ class FACTRTeleopFranka(Node, ABC):
         """
         Instantiates driver for interfacing with Dynamixel servos.
         """
+        self.servo_types = self.config["dynamixel"]["servo_types"]
+        self.num_motors = len(self.servo_types)
         self.joint_signs = np.array(self.config["dynamixel"]["joint_signs"], dtype=float)
+        assert self.num_motors == len(self.joint_signs), \
+            "The number of motors and the number of joint signs must be the same"
         self.dynamixel_port = "/dev/serial/by-id/" + self.config["dynamixel"]["dynamixel_port"]
 
         # checks of the latency timer on ttyUSB of the corresponding port is 1
-        # if it is not 1, the control loop cannot run at 200 Hz, which will cause
-        # extremely undesirable behaviour to the GELLO. If the latency timer is not
-        # 1, one can set it to 1 as follows:
+        # if it is not 1, the control loop cannot run at above 200 Hz, which will 
+        # cause extremely undesirable behaviour for the leader arm. If the latency 
+        # timer is not 1, one can set it to 1 as follows:
         # echo 1 | sudo tee /sys/bus/usb-serial/devices/ttyUSB{NUM}/latency_timer
         ttyUSBx = find_ttyusb(self.dynamixel_port)
         command = f"cat /sys/bus/usb-serial/devices/{ttyUSBx}/latency_timer"        
@@ -146,14 +155,10 @@ class FACTRTeleopFranka(Node, ABC):
                 echo 1 | sudo tee /sys/bus/usb-serial/devices/{ttyUSBx}/latency_timer"
             )
 
-        servo_types = [
-            "XC330_T288_T", "XM430_W210_T", "XC330_T288_T", "XM430_W210_T", 
-            "XC330_T288_T", "XC330_T288_T", "XC330_T288_T", "XC330_T288_T",
-        ]
-        joint_ids = [1, 2, 3, 4, 5, 6, 7, 8]
+        joint_ids = np.arange(self.num_motors) + 1
         try:
             self.driver = DynamixelDriver(
-                joint_ids, servo_types, self.dynamixel_port
+                joint_ids, self.servo_types, self.dynamixel_port
             )
         except FileNotFoundError:
             self.get_logger().info(f"Port {self.dynamixel_port} not found. Please check the connection.")
@@ -169,14 +174,14 @@ class FACTRTeleopFranka(Node, ABC):
         Creates a model of the leader arm given the its URDF for kinematic and dynamic
         computations used in gravity compensation and null-space regulation calculations.
         """
+        self.leader_urdf = os.path.join(
+            'src/factr_teleop/factr_teleop/urdf/', 
+            self.config["arm_teleop"]["leader_urdf"]
+        )
         workspace_root = get_workspace_root()
-        urdf_model_path = os.path.join(
-            workspace_root, 'src/factr_teleop/factr_teleop/urdf/factr_teleop_franka.urdf'
-        )
-        self.pin_model, _, _ = pin.buildModelsFromUrdf(
-            filename=urdf_model_path, 
-            package_dirs=os.path.join(workspace_root, "src/factr_teleop/factr_teleop/urdf")
-        )
+        urdf_model_path = os.path.join(workspace_root, self.leader_urdf)
+        urdf_model_dir = os.path.join(workspace_root, os.path.dirname(urdf_model_path))
+        self.pin_model, _, _ = pin.buildModelsFromUrdf(filename=urdf_model_path, package_dirs=urdf_model_dir)
         self.pin_data = self.pin_model.createData()
 
     def _get_dynamixel_offsets(self, verbose=True):
@@ -242,7 +247,6 @@ class FACTRTeleopFranka(Node, ABC):
             curr_pos, _, _, _ = self.get_leader_joint_states()
             time.sleep(0.5)
         self.get_logger().info(f"FACTR TELEOP {self.name}: Initial joint position matched.")
-
 
     def shut_down(self):
         """
