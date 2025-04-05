@@ -20,18 +20,6 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 
 def generate_launch_description():
-    zed_node = Node(
-        package='cameras',
-        executable='zed',
-        name='front',
-        output='screen',
-        emulate_tty=True,
-        parameters=[
-            {"serial": 22176523},
-            {"name": "front"},
-        ]
-    )
-
     franka_bridge_node = Node(
         package='bc',
         executable='franka_bridge',
