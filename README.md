@@ -58,10 +58,21 @@ Then:
 
 ### Additional Python Dependencies
 
-Install the following Python packages:
+Install ZMQ:
 
 ```bash
 pip install zmq
+```
+Install [Pinocchio](https://stack-of-tasks.github.io/pinocchio/).
+```bash
+sudo apt install ros-<ROS-Distribution>-pinocchio
+```
+- For example,
+```bash
+sudo apt install ros-humble-pinocchio
+```
+Alternatively, try the following via pip.
+```bash
 python -m pip install pin
 ```
 
