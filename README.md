@@ -72,26 +72,25 @@ Then:
 
 ### Additional Python Dependencies
 
-Install ZMQ:
+Install [ZMQ](https://zeromq.org/):
 
 ```bash
 pip install zmq
 ```
-Install [Pinocchio](https://stack-of-tasks.github.io/pinocchio/).
+Install [Pinocchio](https://stack-of-tasks.github.io/pinocchio/):
 ```bash
 sudo apt install ros-<ROS-Distribution>-pinocchio
 ```
 - For example,
-```bash
-sudo apt install ros-humble-pinocchio
-```
+   ```bash
+   sudo apt install ros-humble-pinocchio
+   ```
 Alternatively, try the following via pip.
 ```bash
 python -m pip install pin
 ```
 
 Finally, navigate to the Dynamixel submodule and install it via:
-
 ```bash
 cd <repo_root>/src/factr_teleop/factr_teleop/dynamixel
 pip install -e python
