@@ -49,10 +49,24 @@ These packages must reside within a **ROS 2 workspace**. If you do not already h
 Then:
 
 1. Copy the four provided packages into your workspace's `src/` directory.
-2. Build the workspace:
+2. Ensure to source the ROS2 setup script in your terminal
+   ```bash
+   source /opt/ros/<ROS-Distribution>/setup.bash
+   ```
+   Note that this command should be run everytime you open a new terminal.
+3. From the root of your workspace, build the workspace via:
    ```bash
    colcon build --symlink-install
    ```
+   This should create the following folders in your workspace root
+   ```bash
+   build  install  log  src
+   ```
+4. From the root of your workspace, source the overlay via
+   ```bash
+   source install/local_setup.bash
+   ```
+   Note that this command should also be run everytime you open a new terminal.
 
 > For more guidance, refer to the [ROS 2 Tutorial](https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html).
 
