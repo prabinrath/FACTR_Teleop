@@ -161,14 +161,17 @@ class DynamixelDriver(DynamixelDriverProtocol):
             if dxl_comm_result != COMM_SUCCESS or dxl_error != 0 or mode != expected_mode:
                 raise RuntimeError(f"Operating mode mismatch for Dynamixel ID {dxl_id}")
 
-    def get_positions_and_velocities(self):
+    def get_positions_and_velocities(self, tries=10):
         _positions = np.zeros(len(self._ids), dtype=int)
         _velocities = np.zeros(len(self._ids), dtype=int)
         
         # perform the group sync read transaction
         dxl_comm_result = self._groupSyncRead.txRxPacket()
         if dxl_comm_result != COMM_SUCCESS:
-            raise RuntimeError(f"Warning, communication failed: {dxl_comm_result}")
+            if tries > 0:
+                return self.get_positions_and_velocities(tries-1)
+            else:
+                raise RuntimeError(f"Warning, communication failed: {dxl_comm_result}")
         
         for i, dxl_id in enumerate(self._ids):
             # read velocity data
