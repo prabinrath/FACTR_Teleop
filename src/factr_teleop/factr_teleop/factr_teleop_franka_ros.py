@@ -1,7 +1,5 @@
 # ---------------------------------------------------------------------------
-# FACTR: Force-Attending Curriculum Training for Contact-Rich Policy Learning
-# https://arxiv.org/abs/2502.17432
-# Copyright (c) 2025 Jason Jingzhou Liu and Yulong Li
+# Copyright (c) 2025 Prabin Kumar Rath, Anant Sah
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,6 +22,8 @@ from sensor_msgs.msg import JointState
 import numpy as np
 from builtin_interfaces.msg import Duration
 from threading import Lock
+from franka_msgs.action import Grasp
+from rclpy.action import ActionClient
 
 
 class FACTRTeleopFrankaROS(FACTRTeleop):
@@ -40,6 +40,10 @@ class FACTRTeleopFrankaROS(FACTRTeleop):
         self._latest_franka_joint_state = None
         self.sync_flag = True
         self.js_mutex = Lock()
+
+        self.is_grasped = False
+        self.gripper_client = ActionClient(self, Grasp, '/franka_gripper/grasp')
+        self.gripper_client.wait_for_server()
 
     def set_up_communication(self):
         self.franka_cmd_pub = self.create_publisher(JointTrajectory, '/fr3_arm_controller/joint_trajectory', 10)
@@ -96,13 +100,12 @@ class FACTRTeleopFrankaROS(FACTRTeleop):
         filtered_pos = (1 - self.alpha) * follower_pos + self.alpha * leader_pos
         point = JointTrajectoryPoint()
         distance = np.linalg.norm(follower_pos-leader_pos)
-        print(distance)
+        # print(distance)
         if distance > 0.1 and self.sync_flag:
             dt = max(self.dt * 40 , distance)
             t = Duration(sec=0, nanosec=int(dt * 1e9))
             point.positions = leader_pos.tolist()
         else:
-            # print("Sync_flag_false")
             self.sync_flag = False
             dt = self.dt * 40
             t = Duration(sec=0, nanosec=int(dt * 1e9))
@@ -111,8 +114,31 @@ class FACTRTeleopFrankaROS(FACTRTeleop):
         point.time_from_start = t
         traj.points = [point]
         self.franka_cmd_pub.publish(traj)
+
+        # print(leader_gripper_pos)
+        if leader_gripper_pos > 0.05 and self.is_grasped:
+            grasp_goal = Grasp.Goal()
+            grasp_goal.width = 0.08
+            grasp_goal.epsilon.inner = 0.08
+            grasp_goal.epsilon.outer = 0.08
+            grasp_goal.speed = 0.1
+            grasp_goal.force = 5.0
+            self.gripper_client.send_goal_async(grasp_goal)
+            self.is_grasped = False
+            print("grasped")
+        if leader_gripper_pos < 0.05 and not self.is_grasped:
+            grasp_goal = Grasp.Goal()
+            grasp_goal.width = 0.0
+            grasp_goal.epsilon.inner = 0.08
+            grasp_goal.epsilon.outer = 0.08
+            grasp_goal.speed = 0.1
+            grasp_goal.force = 5.0
+            self.gripper_client.send_goal_async(grasp_goal)  
+            self.is_grasped = True
+            print("ungrasped")
         
 
+#  echo 1 | sudo tee /sys/bus/usb-serial/devices/ttyUSB0/latency_timer
 def main(args=None):
     rclpy.init(args=args)
     factr_teleop_franka_ros = FACTRTeleopFrankaROS()
