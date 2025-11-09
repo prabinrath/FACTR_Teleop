@@ -27,17 +27,6 @@ def generate_launch_description():
         description="IP address of the Franka FCI controller.",
     )
 
-    # Teleop node (adjust config path/package if yours differs)
-    factr_teleop_franka = Node(
-        package="factr_teleop",
-        executable="factr_teleop_franka",
-        name="factr_teleop_franka",
-        output="screen",
-        emulate_tty=True,
-        parameters=[{"config_file": "franka_teleop.yaml"}],
-        namespace=namespace,
-    )
-
     # Franka bringup include
     controllers_yaml = PathJoinSubstitution(
         [
@@ -81,7 +70,6 @@ def generate_launch_description():
             declare_namespace,
             declare_robot_ip,
             franka_bringup_launch_file,
-            factr_teleop_franka,
             controller_spawner,
         ]
     )

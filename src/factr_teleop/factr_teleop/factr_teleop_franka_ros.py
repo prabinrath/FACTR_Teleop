@@ -17,7 +17,6 @@
 import rclpy
 from factr_teleop.factr_teleop import FACTRTeleop
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
-from franka_msgs.msg import FrankaRobotState
 from sensor_msgs.msg import JointState
 import numpy as np
 from builtin_interfaces.msg import Duration
