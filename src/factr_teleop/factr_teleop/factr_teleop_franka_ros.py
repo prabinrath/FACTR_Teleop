@@ -112,6 +112,7 @@ class FACTRTeleopFrankaROS(FACTRTeleop):
 
         point.time_from_start = t
         traj.points = [point]
+        traj.header.stamp = self.get_clock().now().to_msg()
         self.franka_cmd_pub.publish(traj)
 
         # print(leader_gripper_pos)
