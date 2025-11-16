@@ -283,20 +283,23 @@ class FACTRTeleop(Node, ABC):
         that the control loop frequency is at least 200 Hz. Otherwise, the PD controller tuning 
         is unstable for low control frequencies.
         """
-        interpolation_step_size = np.ones(7)*self.config["controller"]["interpolation_step_size"]
+        assert self.enable_gravity_comp, "Gravity compensation must be enabled to use position control."
+        interpolation_step_size = np.ones(7)*self.config["controller"]["joint_position_control"]["interpolation_step_size"]
         kp = self.config["controller"]["joint_position_control"]["kp"]
         kd = self.config["controller"]["joint_position_control"]["kd"]
 
         curr_pos, curr_vel, curr_gripper_pos, curr_gripper_vel = self.get_leader_joint_states()
-        while (np.linalg.norm(curr_pos - goal_joint_pos) > 0.1):
+        while (np.linalg.norm(curr_pos - goal_joint_pos) > 0.05):
             next_joint_pos_target = np.where(
                 np.abs(curr_pos - goal_joint_pos) > interpolation_step_size, 
                 curr_pos + interpolation_step_size*np.sign(goal_joint_pos-curr_pos),
                 goal_joint_pos,
             )
-            torque = -kp*(curr_pos-next_joint_pos_target)-kd*(curr_vel)
-            gripper_torque = -kp*(curr_gripper_pos-goal_gripper_pos)-kd*(curr_gripper_vel)
-            self.set_leader_joint_torque(torque, gripper_torque)
+            torque = self.gravity_compensation(curr_pos, curr_vel)
+            torque += self.friction_compensation(curr_vel)
+            torque += -kp*(curr_pos-next_joint_pos_target)-kd*(curr_vel)
+            # gripper_torque = -kp*(curr_gripper_pos-goal_gripper_pos)-kd*(curr_gripper_vel)
+            self.set_leader_joint_torque(torque, 0)
             curr_pos, curr_vel, curr_gripper_pos, curr_gripper_vel = self.get_leader_joint_states()
     
     def set_leader_joint_torque(self, arm_torque, gripper_torque):

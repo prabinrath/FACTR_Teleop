@@ -17,7 +17,7 @@
 import rclpy
 from factr_teleop.factr_teleop import FACTRTeleop
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
-from sensor_msgs.msg import JointState
+from sensor_msgs.msg import JointState, Joy
 import numpy as np
 from builtin_interfaces.msg import Duration
 from threading import Lock
@@ -52,6 +52,12 @@ class FACTRTeleopFrankaROS(FACTRTeleop):
             self._franka_joint_state_callback,
             10
         )
+        self.create_subscription(
+            Joy,
+            '/spacenav/joy',
+            self._spacenav_callback,
+            1
+        )
 
         if self.enable_torque_feedback:
             raise NotImplementedError
@@ -65,6 +71,17 @@ class FACTRTeleopFrankaROS(FACTRTeleop):
     def _franka_joint_state_callback(self, msg):
         with self.js_mutex:
             self._latest_franka_joint_state = msg
+
+    def _spacenav_callback(self, msg):
+         if len(msg.buttons) < 27:
+             return
+         
+         if msg.buttons[4] == 1:
+            self.get_logger().info("Resetting leader arm to calibration position...")
+            reset_pose = self.calibration_joint_pos.copy()
+            reset_pose[-1] += 1.57
+            self.set_leader_joint_pos(reset_pose, 0.0)
+            self.sync_flag = True
 
     def _gripper_external_torque_callback(self, data):
         gripper_external_torque = data.position[0]
