@@ -65,11 +65,34 @@ def generate_launch_description():
         ],
     )
 
+    # https://github.com/ros-drivers/joystick_drivers
+    spacemouse = Node(
+            package='spacenav',          
+            executable='spacenav_node',  
+            name='spacenav_node',        
+            output='screen',             
+            parameters=[{
+                'publish_joy': True,     
+                'publish_twist': True,
+                'zero_when_static': True,
+            }],
+        )
+
+    franka_rollout_node = Node(
+        package='bc',
+        executable='franka_rollout',
+        name='franka_rollout',
+        output='screen',
+        namespace=namespace,
+    )
+
     return LaunchDescription(
         [
             declare_namespace,
             declare_robot_ip,
             franka_bringup_launch_file,
             controller_spawner,
+            spacemouse,
+            franka_rollout_node,
         ]
     )

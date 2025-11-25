@@ -25,6 +25,7 @@ setup(
             'replay_traj = bc.replay_traj:main',
             'franka_bridge = bc.franka_bridge:main',
             'policy_rollout = bc.policy_rollout:main',
+            'franka_rollout = bc.franka_rollout:main',
         ],
     },
 )
