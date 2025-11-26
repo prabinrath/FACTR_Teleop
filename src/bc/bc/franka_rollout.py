@@ -4,6 +4,7 @@ from rclpy.action import ActionClient
 from control_msgs.action import FollowJointTrajectory
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from sensor_msgs.msg import JointState, Joy
+from franka_msgs.action import Grasp
 from std_msgs.msg import Empty
 from builtin_interfaces.msg import Duration
 import numpy as np
@@ -16,7 +17,8 @@ class FrankaRollout(Node):
         self.home_pose = [0.0, -0.7854, 0.0, -2.356, 0.0, 1.57, 0.77]
         self.joint_names = [f'fr3_joint{i}' for i in range(1, 8)]
         
-        self.action_client = ActionClient(self, FollowJointTrajectory, '/fr3_arm_controller/follow_joint_trajectory')
+        self.arm_client = ActionClient(self, FollowJointTrajectory, '/fr3_arm_controller/follow_joint_trajectory')
+        self.gripper_client = ActionClient(self, Grasp, '/franka_gripper/grasp')
         self.subscription_joy = self.create_subscription(Joy, '/spacenav/joy', self.joy_callback, 1)
         self.subscription_joint = self.create_subscription(JointState, '/joint_states', self.joint_state_callback, 10)
         self.subscription_reset = self.create_subscription(Empty, '/franka_reset', self.reset_callback, 1)
@@ -25,9 +27,10 @@ class FrankaRollout(Node):
         self.lock = Lock()
         self.last_reset_time = 0.0
         
-        self.get_logger().info('Waiting for action server...')
-        self.action_client.wait_for_server()
-        self.get_logger().info('Action server available.')
+        self.get_logger().info('Waiting for action servers...')
+        self.gripper_client.wait_for_server()
+        self.arm_client.wait_for_server()
+        self.get_logger().info('Action servers available.')
 
     def joint_state_callback(self, msg):
         positions = []
@@ -59,6 +62,14 @@ class FrankaRollout(Node):
             return
         
         self.last_reset_time = current_time
+
+        grasp_goal = Grasp.Goal()
+        grasp_goal.width = 0.08
+        grasp_goal.epsilon.inner = 0.08
+        grasp_goal.epsilon.outer = 0.08
+        grasp_goal.speed = 0.1
+        grasp_goal.force = 5.0
+        self.gripper_client.send_goal_async(grasp_goal)
         
         with self.lock:
             if self.current_joint_positions is None:
@@ -87,7 +98,7 @@ class FrankaRollout(Node):
         goal_msg.trajectory = traj
         
         self.get_logger().info(f'Sending reset command. Distance: {distance:.2f}, Duration: {duration_sec:.2f}s')
-        self.action_client.send_goal_async(goal_msg)
+        self.arm_client.send_goal_async(goal_msg)
 
 def main(args=None):
     rclpy.init(args=args)
