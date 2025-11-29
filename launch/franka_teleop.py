@@ -41,8 +41,8 @@ def generate_launch_description():
     # Franka bringup include
     controllers_yaml = PathJoinSubstitution(
         [
-            FindPackageShare("franka_fr3_moveit_config"),
-            "config",
+            FindPackageShare("factr_teleop"),
+            "configs",
             "fr3_ros_controllers.yaml",
         ]
     )
