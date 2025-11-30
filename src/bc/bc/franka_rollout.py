@@ -13,8 +13,7 @@ from threading import Lock
 class FrankaRollout(Node):
     def __init__(self):
         super().__init__('franka_rollout')
-        # User provided 8 values, using first 7 for arm joints
-        self.home_pose = [0.0, -0.7854, 0.0, -2.356, 0.0, 1.57, 0.77]
+        self.home_pose = [0.0, -np.pi/4, 0.0, -3*np.pi/4, 0.0, np.pi/2, np.pi/4]
         self.joint_names = [f'fr3_joint{i}' for i in range(1, 8)]
         
         self.arm_client = ActionClient(self, FollowJointTrajectory, '/fr3_arm_controller/follow_joint_trajectory')
