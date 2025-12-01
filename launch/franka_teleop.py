@@ -4,7 +4,7 @@
 # ---------------------------------------------------------------------------
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription  # <-- from launch.actions
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import PathJoinSubstitution, LaunchConfiguration
 from launch_ros.actions import Node
@@ -49,7 +49,7 @@ def generate_launch_description():
     franka_bringup_launch_file = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
-                [FindPackageShare("franka_bringup"), "launch", "franka.launch.py"]
+                [FindPackageShare("factr_teleop"), "launch", "franka.launch.py"]
             )
         ),
         launch_arguments={
@@ -61,7 +61,7 @@ def generate_launch_description():
         }.items(),
     )
 
-    # Spawn the arm controller (use Node instead of ExecuteProcess; namespace applied cleanly)
+    # Spawn the arm controller
     controller_spawner = Node(
         package="controller_manager",
         executable="spawner",
@@ -72,7 +72,7 @@ def generate_launch_description():
             "--controller-manager-timeout",
             "60",
             "--controller-manager",
-            "/controller_manager",  # resolves to /<ns>/controller_manager when namespaced
+            "/controller_manager",
         ],
     )
 
@@ -89,6 +89,14 @@ def generate_launch_description():
             }],
         )
 
+    # franka_error_recovery_node = Node(
+    #     package='bc',
+    #     executable='franka_error_recovery',
+    #     name='franka_error_recovery',
+    #     output='screen',
+    #     namespace=namespace,
+    # )
+
     return LaunchDescription(
         [
             declare_namespace,
@@ -96,6 +104,7 @@ def generate_launch_description():
             franka_bringup_launch_file,
             factr_teleop_franka,
             controller_spawner,
-            spacemouse
+            spacemouse,
+            # franka_error_recovery_node,
         ]
     )

@@ -26,6 +26,7 @@ setup(
             'franka_bridge = bc.franka_bridge:main',
             'policy_rollout = bc.policy_rollout:main',
             'franka_rollout = bc.franka_rollout:main',
+            'franka_error_recovery = bc.franka_error_recovery:main',
         ],
     },
 )
