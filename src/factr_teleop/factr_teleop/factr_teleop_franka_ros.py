@@ -80,7 +80,8 @@ class FACTRTeleopFrankaROS(FACTRTeleop):
             self.get_logger().info("Resetting leader arm to calibration position...")
             reset_pose = self.calibration_joint_pos.copy()
             reset_pose[-1] += 1.57
-            self.set_leader_joint_pos(reset_pose, 0.0)
+            error = self.set_leader_joint_pos(reset_pose, 0.0)
+            self.get_logger().info(f"Resetting complete with error, {error}")
             self.sync_flag = True
 
     def _gripper_external_torque_callback(self, data):

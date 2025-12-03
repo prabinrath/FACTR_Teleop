@@ -301,6 +301,8 @@ class FACTRTeleop(Node, ABC):
             # gripper_torque = -kp*(curr_gripper_pos-goal_gripper_pos)-kd*(curr_gripper_vel)
             self.set_leader_joint_torque(torque, 0)
             curr_pos, curr_vel, curr_gripper_pos, curr_gripper_vel = self.get_leader_joint_states()
+        
+        return np.abs(curr_pos - goal_joint_pos)
     
     def set_leader_joint_torque(self, arm_torque, gripper_torque):
         """
