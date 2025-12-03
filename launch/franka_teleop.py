@@ -89,13 +89,13 @@ def generate_launch_description():
             }],
         )
 
-    # franka_error_recovery_node = Node(
-    #     package='bc',
-    #     executable='franka_error_recovery',
-    #     name='franka_error_recovery',
-    #     output='screen',
-    #     namespace=namespace,
-    # )
+    franka_error_recovery_node = Node(
+        package='bc',
+        executable='franka_error_recovery',
+        name='franka_error_recovery',
+        output='screen',
+        namespace=namespace,
+    )
 
     return LaunchDescription(
         [
@@ -105,6 +105,6 @@ def generate_launch_description():
             factr_teleop_franka,
             controller_spawner,
             spacemouse,
-            # franka_error_recovery_node,
+            franka_error_recovery_node,
         ]
     )
