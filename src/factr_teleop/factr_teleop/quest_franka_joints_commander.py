@@ -29,6 +29,7 @@ from builtin_interfaces.msg import Duration
 from ament_index_python.packages import get_package_share_directory
 import placo
 import os
+import time
 
 
 class QuestFrankaControl(Node):
@@ -52,7 +53,7 @@ class QuestFrankaControl(Node):
         self.solver.enable_joint_limits(True)
         
         # Set dt for velocity control (matching joy callback frequency)
-        self.solver.dt = 1.0 / 30.0
+        self.solver.dt = 1.0 / 30
         
         # Joint names for FR3
         self.joint_names = [
@@ -71,7 +72,7 @@ class QuestFrankaControl(Node):
         self.frame_task.configure('fr3_hand_tcp', 'soft', 1.0, 1.0)
         
         # Add regularization to keep solution smooth
-        self.regularization = self.solver.add_regularization_task(1e-4)
+        self.regularization = self.solver.add_regularization_task(1e-6)
         
         self.pub = self.create_publisher(
             JointTrajectory,
@@ -84,6 +85,7 @@ class QuestFrankaControl(Node):
         self.tare_quest_pose_tuple = None
         self.latest_joint_state = None
         self.alpha = 1.0
+        self.last_solve_time = None
         
         self.create_subscription(
             JointState,
@@ -203,6 +205,13 @@ class QuestFrankaControl(Node):
             
             # Update the frame task target
             self.frame_task.T_world_frame = T_target
+            
+            # Update dt based on actual time difference between solve calls
+            current_time = time.perf_counter()
+            if self.last_solve_time is not None:
+                dt = current_time - self.last_solve_time
+                self.solver.dt = dt
+            self.last_solve_time = current_time
             
             # Solve IK
             self.robot.update_kinematics()
