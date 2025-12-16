@@ -7,6 +7,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import PathJoinSubstitution, LaunchConfiguration
+from launch.conditions import LaunchConfigurationEquals
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
@@ -15,6 +16,7 @@ def generate_launch_description():
     # Launch args
     namespace = LaunchConfiguration("namespace")
     robot_ip = LaunchConfiguration("robot_ip")
+    control = LaunchConfiguration("control")
 
     declare_namespace = DeclareLaunchArgument(
         "namespace",
@@ -26,8 +28,14 @@ def generate_launch_description():
         default_value="172.16.0.2",
         description="IP address of the Franka FCI controller.",
     )
+    declare_control = DeclareLaunchArgument(
+        "control",
+        default_value="factr",
+        description="Control type: 'factr' or 'quest'.",
+        choices=["factr", "quest"],
+    )
 
-    # Teleop node (adjust config path/package if yours differs)
+    # FACTR teleop node
     factr_teleop_franka = Node(
         package="factr_teleop",
         executable="factr_teleop_franka",
@@ -36,6 +44,29 @@ def generate_launch_description():
         emulate_tty=True,
         parameters=[{"config_file": "franka_teleop.yaml"}],
         namespace=namespace,
+        condition=LaunchConfigurationEquals("control", "factr"),
+    )
+
+    # Quest listener node
+    quest_listener = Node(
+        package="factr_teleop",
+        executable="quest_listener.py",
+        name="quest_listener",
+        output="screen",
+        emulate_tty=True,
+        namespace=namespace,
+        condition=LaunchConfigurationEquals("control", "quest"),
+    )
+
+    # Quest franka joints commander node
+    quest_franka_commander = Node(
+        package="factr_teleop",
+        executable="quest_franka_joints_commander.py",
+        name="quest_franka_joints_commander",
+        output="screen",
+        emulate_tty=True,
+        namespace=namespace,
+        condition=LaunchConfigurationEquals("control", "quest"),
     )
 
     # Franka bringup include
@@ -101,8 +132,11 @@ def generate_launch_description():
         [
             declare_namespace,
             declare_robot_ip,
+            declare_control,
             franka_bringup_launch_file,
             factr_teleop_franka,
+            quest_listener,
+            quest_franka_commander,
             controller_spawner,
             spacemouse,
             franka_error_recovery_node,

@@ -16,6 +16,8 @@ setup(
             glob('factr_teleop/configs/*.yaml')),
         (os.path.join('share', package_name, 'launch'),
             glob('launch/*.py')),
+        (os.path.join('share', package_name, 'urdf'),
+            glob('factr_teleop/urdf/*.urdf')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -28,6 +30,8 @@ setup(
         'console_scripts': [
             'factr_teleop_franka = factr_teleop.factr_teleop_franka_ros:main',
             'factr_teleop_grav_comp_demo = factr_teleop.factr_teleop_grav_comp_demo:main',
+            'quest_listener.py = factr_teleop.quest_listener:main',
+            'quest_franka_joints_commander.py = factr_teleop.quest_franka_joints_commander:main',
         ],
     },
 )
