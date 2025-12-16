@@ -52,7 +52,7 @@ class QuestFrankaControl(Node):
         self.solver.enable_joint_limits(True)
         
         # Set dt for velocity control (matching joy callback frequency)
-        self.solver.dt = 1.0 / 30.0  # 30Hz -> ~33.3ms timestep
+        self.solver.dt = 1.0 / 30.0
         
         # Joint names for FR3
         self.joint_names = [
@@ -61,13 +61,9 @@ class QuestFrankaControl(Node):
         ]
         
         # Initialize robot to a neutral position
-        self.robot.set_joint('fr3_joint1', 0.0)
-        self.robot.set_joint('fr3_joint2', -0.785)  # -45 degrees
-        self.robot.set_joint('fr3_joint3', 0.0)
-        self.robot.set_joint('fr3_joint4', -2.356)  # -135 degrees
-        self.robot.set_joint('fr3_joint5', 0.0)
-        self.robot.set_joint('fr3_joint6', 1.571)   # 90 degrees
-        self.robot.set_joint('fr3_joint7', 0.785)   # 45 degrees
+        neutral_positions = [0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785]
+        for joint_name, position in zip(self.joint_names, neutral_positions):
+            self.robot.set_joint(joint_name, position)
         self.robot.update_kinematics()
         
         # Create frame task for end-effector control
@@ -87,10 +83,11 @@ class QuestFrankaControl(Node):
         self.latest_quest_pose_msg = None
         self.tare_quest_pose_tuple = None
         self.latest_joint_state = None
+        self.alpha = 1.0
         
         self.create_subscription(
             JointState,
-            '/franka/joint_states',
+            '/joint_states',
             self.joint_state_cb,
             1
         )
@@ -125,7 +122,8 @@ class QuestFrankaControl(Node):
             if self.origin_pose_tuple is None:
                 # Compute origin pose once using FK from current joint state
                 if self.latest_joint_state is not None:
-                    for joint_name, position in zip(self.latest_joint_state.name, self.latest_joint_state.position):
+                    for joint_name in self.joint_names:
+                        position = self.latest_joint_state.position[self.latest_joint_state.name.index(joint_name)]
                         self.robot.set_joint(joint_name, position)
                     self.robot.update_kinematics()
                     T_world_ee = self.robot.get_T_world_frame('fr3_hand_tcp')
@@ -194,7 +192,8 @@ class QuestFrankaControl(Node):
             # ---- Use Placo IK to compute joint positions ----
             # Update robot state with current joint positions
             if self.latest_joint_state is not None:
-                for joint_name, position in zip(self.latest_joint_state.name, self.latest_joint_state.position):
+                for joint_name in self.joint_names:
+                    position = self.latest_joint_state.position[self.latest_joint_state.name.index(joint_name)]
                     self.robot.set_joint(joint_name, position)
             
             # Create target transformation matrix
@@ -210,9 +209,19 @@ class QuestFrankaControl(Node):
             self.solver.solve(True)  # Apply solution to robot state
             
             # Get joint positions from solved configuration
-            joint_positions = []
+            ik_joint_positions = []
             for joint_name in self.joint_names:
-                joint_positions.append(self.robot.get_joint(joint_name))
+                ik_joint_positions.append(self.robot.get_joint(joint_name))
+            
+            # Apply smoothing between current and IK joint positions
+            current_joint_positions = [
+                self.latest_joint_state.position[self.latest_joint_state.name.index(joint_name)]
+                for joint_name in self.joint_names
+            ]
+            filtered_joint_positions = [
+                self.alpha * ikjp + (1 - self.alpha) * cjp
+                for cjp, ikjp in zip(current_joint_positions, ik_joint_positions)
+            ]
             
             # ---- Publish JointTrajectory ----
             traj_msg = JointTrajectory()
@@ -222,8 +231,8 @@ class QuestFrankaControl(Node):
             
             # Create trajectory point
             point = JointTrajectoryPoint()
-            point.positions = joint_positions
-            point.time_from_start = Duration(sec=0, nanosec=int((1.0/30.0) * 1e9))  # 33.3ms (30Hz)
+            point.positions = filtered_joint_positions
+            point.time_from_start = Duration(sec=0, nanosec=int(0.1 * 1e9))
             
             traj_msg.points = [point]
             self.pub.publish(traj_msg)  
