@@ -10,15 +10,29 @@ from builtin_interfaces.msg import Duration
 import numpy as np
 from threading import Lock
 
-class FrankaRollout(Node):
+class FrankaMoveToStart(Node):
     def __init__(self):
-        super().__init__('franka_rollout')
+        super().__init__('franka_move_to_start')
+        self.declare_parameter('interface', 'spacemouse')
+        interface = self.get_parameter('interface').value
+        
         self.home_pose = [0.0, -np.pi/4, 0.0, -3*np.pi/4, 0.0, np.pi/2, np.pi/4]
         self.joint_names = [f'fr3_joint{i}' for i in range(1, 8)]
         
         self.arm_client = ActionClient(self, FollowJointTrajectory, '/fr3_arm_controller/follow_joint_trajectory')
         self.gripper_client = ActionClient(self, Grasp, '/franka_gripper/grasp')
-        self.subscription_joy = self.create_subscription(Joy, '/spacenav/joy', self.joy_callback, 1)
+        
+        # Subscribe based on interface parameter
+        if interface == 'spacemouse':
+            self.subscription_joy = self.create_subscription(Joy, '/spacenav/joy', self.joy_callback, 1)
+            self.get_logger().info('Franka MoveToStart using spacemouse interface')
+        elif interface == 'quest':
+            self.subscription_quest = self.create_subscription(Joy, '/right_hand_inputs', self.quest_callback, 1)
+            self.get_logger().info('Franka MoveToStart using quest interface')
+        else:
+            self.get_logger().error(f'Unknown interface: {interface}. Must be "spacemouse" or "quest"')
+            raise ValueError(f'Invalid interface: {interface}')
+        
         self.subscription_joint = self.create_subscription(JointState, '/joint_states', self.joint_state_callback, 10)
         self.subscription_reset = self.create_subscription(Empty, '/franka_reset', self.reset_callback, 1)
         
@@ -50,6 +64,14 @@ class FrankaRollout(Node):
 
         # R button on the right side of the SpaceMouse
         if msg.buttons[4] == 1:
+            self.send_reset_command()
+    
+    def quest_callback(self, msg):
+        if len(msg.buttons) < 2:
+            return
+        
+        # btn_low for reset
+        if msg.buttons[1] == 1:
             self.send_reset_command()
 
     def reset_callback(self, msg):
@@ -101,7 +123,7 @@ class FrankaRollout(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = FrankaRollout()
+    node = FrankaMoveToStart()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()

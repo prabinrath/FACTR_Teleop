@@ -18,6 +18,8 @@ class FrankaErrorRecovery(Node):
         
         # Spacemouse subscription
         self.subscription_joy = self.create_subscription(Joy, '/spacenav/joy', self.joy_callback, 1)
+        # Quest controller subscription
+        self.subscription_quest = self.create_subscription(Joy, '/right_hand_inputs', self.quest_callback, 1)
         
         # Service clients for controller management
         self.error_recovery_client = ActionClient(self, ErrorRecovery, '/action_server/error_recovery')
@@ -34,6 +36,14 @@ class FrankaErrorRecovery(Node):
         
         # Button 22 for error recovery and controller respawn
         if msg.buttons[22] == 1:
+            self.error_recovery_and_respawn()
+    
+    def quest_callback(self, msg):
+        if len(msg.buttons) < 2:
+            return
+        
+        # btn_up for error recovery
+        if msg.buttons[0] == 1:
             self.error_recovery_and_respawn()
 
     def error_recovery_and_respawn(self):

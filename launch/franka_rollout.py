@@ -78,12 +78,13 @@ def generate_launch_description():
             }],
         )
 
-    franka_rollout_node = Node(
+    franka_move_to_start_node = Node(
         package='bc',
-        executable='franka_rollout',
-        name='franka_rollout',
+        executable='franka_move_to_start',
+        name='franka_move_to_start',
         output='screen',
         namespace=namespace,
+        parameters=[{'interface': 'spacemouse'}],
     )
 
     franka_error_recovery_node = Node(
@@ -101,7 +102,7 @@ def generate_launch_description():
             franka_bringup_launch_file,
             controller_spawner,
             spacemouse,
-            franka_rollout_node,
+            franka_move_to_start_node,
             franka_error_recovery_node,
         ]
     )

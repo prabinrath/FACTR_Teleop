@@ -128,6 +128,16 @@ def generate_launch_description():
         namespace=namespace,
     )
 
+    franka_move_to_start_node = Node(
+        package='bc',
+        executable='franka_move_to_start',
+        name='franka_move_to_start',
+        output='screen',
+        namespace=namespace,
+        parameters=[{'interface': 'quest'}],
+        condition=LaunchConfigurationEquals("control", "quest"),
+    )
+
     return LaunchDescription(
         [
             declare_namespace,
@@ -140,5 +150,6 @@ def generate_launch_description():
             controller_spawner,
             spacemouse,
             franka_error_recovery_node,
+            franka_move_to_start_node,
         ]
     )
