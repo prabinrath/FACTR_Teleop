@@ -71,6 +71,7 @@ class QuestFrankaControl(Node):
         self.frame_task = self.solver.add_frame_task('fr3_hand_tcp', np.eye(4))
         self.frame_task.configure('fr3_hand_tcp', 'soft', 0.5, 0.5)
 
+        # Create joint task for nullspace regularization
         self.joints_task = self.solver.add_joints_task()
         self.joints_task.set_joints({joint_name: position for joint_name, position in zip(self.joint_names, neutral_positions)})
         self.joints_task.configure("nullspace", "soft", 1e-5)
