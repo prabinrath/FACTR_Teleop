@@ -69,7 +69,11 @@ class QuestFrankaControl(Node):
         
         # Create frame task for end-effector control
         self.frame_task = self.solver.add_frame_task('fr3_hand_tcp', np.eye(4))
-        self.frame_task.configure('fr3_hand_tcp', 'soft', 1.0, 1.0)
+        self.frame_task.configure('fr3_hand_tcp', 'soft', 0.5, 0.5)
+
+        self.joints_task = self.solver.add_joints_task()
+        self.joints_task.set_joints({joint_name: position for joint_name, position in zip(self.joint_names, neutral_positions)})
+        self.joints_task.configure("nullspace", "soft", 1e-5)
         
         # Add regularization to keep solution smooth
         self.regularization = self.solver.add_regularization_task(1e-6)
